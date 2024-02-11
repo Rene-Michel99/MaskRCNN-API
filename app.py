@@ -1,5 +1,8 @@
+import os
 import json
+import shutil
 import logging
+import urllib.request
 from flask import Flask, request
 from flask_cors import CORS, cross_origin
 
@@ -59,6 +62,8 @@ class APIServer:
         self.inference_route = MaskRCNNInferenceRoute(configs=CONFIGS, weights=WEIGHTS, logger=self.logger)
         self.status_route = MaskRCNNStatusRoute()
         self.training_route = MaskRCNNTrainingRoute(WEIGHTS, CONFIGS, self.logger)
+
+        self._download_alita_weights()
         self.logger.info("Server is ready!")
 
     def run(self):
@@ -80,6 +85,16 @@ class APIServer:
             return self.status_route.process(model)
         except Exception as ex:
             return self._parse_exception(ex)
+    
+    def _download_alita_weights(self):
+        alita_url_path = "https://github.com/Rene-Michel99/MaskRCNN-API/releases/download/weights/mask_rcnn_alita_and_poros_0004.h5"
+        if os.path.exists(WEIGHTS["alita"]):
+            return
+        
+        with urllib.request.urlopen(alita_url_path) as resp, open(WEIGHTS["alita"], 'wb') as out:
+            shutil.copyfileobj(resp, out)
+        
+        self.logger.info("Alita weights downloaded!")
     
     def _get_model_based_on_data(self, data: dict):
         classes = data["classes"]
