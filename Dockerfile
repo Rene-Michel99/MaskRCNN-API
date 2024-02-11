@@ -6,7 +6,6 @@ RUN mkdir /app
 WORKDIR /app
 
 COPY app.py ./app.py
-COPY ./AIManagers ./AIManagers
 COPY ./routes ./routes
 COPY ./exceptions ./exceptions
 RUN mkdir logs
@@ -23,5 +22,6 @@ RUN pip install -r requirements_sagemaker
 RUN pip install -U Flask
 RUN pip install flask-restful
 RUN pip install scikit-learn
+RUN pip install flask-cors
 
 CMD ["python3", "app.py"]

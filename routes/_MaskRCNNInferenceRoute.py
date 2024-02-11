@@ -19,9 +19,6 @@ class MaskRCNNInferenceRoute(object):
     
     def process(self, request: dict, model: MaskRCNN):
         self._validate_request(request)
-
-        classes = request['classes']
-        #model = self._load_proper_weights_to_model(classes)
         
         image_path = self._parse_request(request)
         image = cv.imread(image_path)
