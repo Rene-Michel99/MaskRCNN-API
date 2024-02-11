@@ -10,7 +10,6 @@ COPY ./AIManagers ./AIManagers
 COPY ./routes ./routes
 COPY ./exceptions ./exceptions
 RUN mkdir logs
-COPY mask_rcnn_alita_and_poros_0004.h5 ./logs/mask_rcnn_alita_and_poros_0004.h5
 
 RUN apt-get update
 RUN apt-get upgrade -y
