@@ -6,11 +6,9 @@ RUN mkdir /app
 WORKDIR /app
 
 COPY app.py ./app.py
-COPY ./AIManagers ./AIManagers
 COPY ./routes ./routes
 COPY ./exceptions ./exceptions
 RUN mkdir logs
-COPY mask_rcnn_alita_and_poros_0004.h5 ./logs/mask_rcnn_alita_and_poros_0004.h5
 
 RUN apt-get update
 RUN apt-get upgrade -y
@@ -24,5 +22,6 @@ RUN pip install -r requirements_sagemaker
 RUN pip install -U Flask
 RUN pip install flask-restful
 RUN pip install scikit-learn
+RUN pip install flask-cors
 
 CMD ["python3", "app.py"]
