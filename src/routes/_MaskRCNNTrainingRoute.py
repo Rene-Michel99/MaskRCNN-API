@@ -1,7 +1,7 @@
 from logging import Logger
 
 from mrcnn.model import MaskRCNN
-from exceptions import BADRequestException, NOTFoundException
+from ..exceptions import BADRequestException, NOTFoundException
 
 
 class MaskRCNNTrainingRoute(object):

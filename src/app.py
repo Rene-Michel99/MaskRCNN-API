@@ -1,4 +1,5 @@
 import os
+import uuid
 import json
 import shutil
 import logging
@@ -8,16 +9,17 @@ from flask_cors import CORS, cross_origin
 
 from mrcnn.model import MaskRCNN
 from mrcnn.Configs import Config
-from routes import MaskRCNNInferenceRoute, MaskRCNNStatusRoute, MaskRCNNTrainingRoute
+from .routes import MaskRCNNInferenceRoute, MaskRCNNStatusRoute, MaskRCNNTrainingRoute
 
 # create image: docker image build -t ubuntu:maskrcnn-backend .
-# docker run --name maskrcnn_container -d -p 8180:8180 ubuntu:maskrcnn-backend
+# docker run --name maskrcnn_container -d -p 8080:8080 ubuntu:maskrcnn-backend
+# docker run -it ubuntu:maskrcnn-backend bash   
 #cp src/. container_id:/target
 
 
 WEIGHTS = {
-    "alita": "./logs/mask_rcnn_alita_and_poros_0004.h5",
-    "coco": "./logs/mask_rcnn_coco.h5",
+    "alita": "./logs/weights/mask_rcnn_alita_and_poros_0004.h5",
+    "coco": "./logs/weights/mask_rcnn_coco.h5",
 }
 CONFIGS = {
     "alita": Config(images_per_gpu=1, name="alita", num_classes=3, class_names=['BG', 'Idiomorfica', 'Subdiomorfica', 'Xenomorfica']),
@@ -46,9 +48,13 @@ class APIServer:
         self.app = Flask(__name__)
         self.cache = {}
         self.cors = CORS(self.app)
+        self.log_dir = os.path.join(
+            "logs",
+            str(uuid.uuid4()),
+        )
 
-        self.app.route("/maskrcnn", methods=["POST"])(self.inference)
-        self.app.route("/maskrcnn/<config>", methods=["GET"])(self.status)
+        self.app.route("/invocations", methods=["POST"])(self.inference)
+        self.app.route("/ping", methods=["GET"])(self.status)
 
         self.logger = logging.getLogger('MaskRCNNBackend')
         self.logger.setLevel(logging.DEBUG)
@@ -63,11 +69,10 @@ class APIServer:
         self.status_route = MaskRCNNStatusRoute()
         self.training_route = MaskRCNNTrainingRoute(WEIGHTS, CONFIGS, self.logger)
 
-        self._download_alita_weights()
         self.logger.info("Server is ready!")
 
     def run(self):
-        self.app.run(host="0.0.0.0", port=8180, debug=True)
+        self.app.run(host="0.0.0.0", port=8080, debug=True)
 
     @cross_origin()
     def inference(self):
@@ -79,22 +84,26 @@ class APIServer:
             return self._parse_exception(ex)
     
     @cross_origin()
-    def status(self, config):
+    def status(self):
         try:
-            model = self.cache.get(f"model_{config}")
-            return self.status_route.process(model)
+            return self.status_route.process(self.cache)
         except Exception as ex:
             return self._parse_exception(ex)
     
-    def _download_alita_weights(self):
-        alita_url_path = "https://github.com/Rene-Michel99/MaskRCNN-API/releases/download/weights/mask_rcnn_alita_and_poros_0004.h5"
-        if os.path.exists(WEIGHTS["alita"]):
-            return
+    def _download_weights(self):
+        if not os.path.exists("./logs"):
+            os.system("mkdir ./logs")
+            os.system(f"mkdir {self.log_dir}")
+            os.system(f"mkdir logs/weights")
         
-        with urllib.request.urlopen(alita_url_path) as resp, open(WEIGHTS["alita"], 'wb') as out:
-            shutil.copyfileobj(resp, out)
+        for key in WEIGHTS.keys():
+            if os.path.exists(WEIGHTS[key]):
+                continue
         
-        self.logger.info("Alita weights downloaded!")
+            with urllib.request.urlopen(WEIGHTS_URLS[key]) as resp, open(WEIGHTS[key], 'wb') as out:
+                shutil.copyfileobj(resp, out)
+        
+        self.logger.info("Weights downloaded!")
     
     def _get_model_based_on_data(self, data: dict):
         classes = data["classes"]
@@ -114,12 +123,8 @@ class APIServer:
         
         self.logger.info(f"Creating and caching model for weights {key}")
         correct_config = CONFIGS.get(key)
-        if key == "coco":
-            model = MaskRCNN(mode="inference", config=correct_config)
-            model.load_weights(init_with="coco")
-        elif key == "alita":
-            model = MaskRCNN(mode="inference", config=correct_config)
-            model.load_weights(filepath=WEIGHTS[key], by_name=True)
+        model = MaskRCNN(mode="inference", config=correct_config, model_dir=self.log_dir)
+        model.load_weights(filepath=WEIGHTS[key], by_name=True)
         
         self.cache[f"model_{key}"] = model
         return model
@@ -133,6 +138,5 @@ class APIServer:
         return {"error": ex_message}, error_code
 
 
-if __name__ == '__main__': 
-    api_server = APIServer()
-    api_server.run()
+api_server = APIServer()
+#api_server.run()

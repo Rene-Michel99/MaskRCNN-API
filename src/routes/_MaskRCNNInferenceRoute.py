@@ -7,7 +7,7 @@ from logging import Logger
 from sklearn.decomposition import PCA
 
 from mrcnn.model import MaskRCNN
-from exceptions import UnprocessableRequest
+from ..exceptions import UnprocessableRequest
 
 
 class MaskRCNNInferenceRoute(object):
@@ -33,7 +33,7 @@ class MaskRCNNInferenceRoute(object):
             raise UnprocessableRequest(message="no classes found in request", error_code=422)
     
     def _parse_request(self, data: dict):
-        image_dir = "./tests/images"
+        image_dir = "./payloads"
         image_path = None
         try:
             file_name, encoded_image = data['image'].split(',')
