@@ -1,5 +1,5 @@
 import os
-import math
+import uuid
 import base64
 import cv2 as cv
 import numpy as np
@@ -7,30 +7,33 @@ from logging import Logger
 from sklearn.decomposition import PCA
 
 from mrcnn.model import MaskRCNN
-from ..exceptions import UnprocessableRequest
+from ..exceptions import UnprocessableRequest, LockedException, BadRequestException
+from ..models import RouteLock
 
 
-class MaskRCNNInferenceRoute(object):
+class MaskRCNNInferenceRoute:
 
-    def __init__(self, configs, weights, logger: Logger) -> None:
-        self.configs = configs
-        self.weights = weights
+    def __init__(self, logger: Logger) -> None:
         self.logger = logger
+        self.lock = RouteLock()
     
     def process(self, request: dict, model: MaskRCNN):
+        if self.lock.locked:
+            raise LockedException("MaskRCNN model is already processing, try again later.")
+        
         self._validate_request(request)
         
         image_path = self._parse_request(request)
         image = cv.imread(image_path)
         results = model.detect([image], verbose=1)[0]
 
-        return self._parse_detections(results, model)
+        return self._parse_detections(results, image.shape, model)
     
     def _validate_request(self, data):
         if 'image' not in data.keys():
-            raise UnprocessableRequest(message="no image found in request", error_code=422)
+            raise BadRequestException(message="no image found in request")
         if 'classes' not in data.keys():
-            raise UnprocessableRequest(message="no classes found in request", error_code=422)
+            raise BadRequestException(message="no classes found in request")
     
     def _parse_request(self, data: dict):
         image_dir = "./payloads"
@@ -45,30 +48,38 @@ class MaskRCNNInferenceRoute(object):
             image_path = os.path.join(image_dir, file_name)
             with open(image_path, 'wb') as f:
                 f.write(base64.b64decode(encoded_image))
+            
+            test_img = cv.imread(image_path)
+        except ValueError as ex:
+            self.logger.exception(ex)
+            raise BadRequestException(
+                 "The image data must be encoded in base64 with pattern data:filename/png;base64,image_base64_data"
+            )
         except Exception as ex:
              self.logger.exception(ex)
-             raise UnprocessableRequest(message="image can't be used, maybe is corrupted", error_code=422)
+             raise UnprocessableRequest("image can't be used, maybe is corrupted")
             
         return image_path
 
-    def _parse_detections(self, results, model):
+    def _parse_detections(self, results, img_shape, model):
             self.logger.info("starting to parse results of inference")
+            
             rois = results["rois"].tolist() if type(results["rois"]) != list else results["rois"]
             class_ids = self._parse_class_ids(results["class_ids"], model)
             scores = results["scores"].tolist() if type(results["scores"]) != list else results["scores"]
-            masks, measurements = self._parse_masks(results["masks"])
+            masks = self._parse_masks(results["masks"])
 
-            output_data = {'inferences': []}
-            for roi, class_id, score, mask, measurement in zip(rois, class_ids, scores, masks, measurements):
+            output_data = {
+                'inferences': [],
+                'imgSize': img_shape
+            }
+            for roi, class_id, score, mask in zip(rois, class_ids, scores, masks):
                 output_data['inferences'].append({
+                    'id': str(uuid.uuid4()),
                     'bbox': roi,
                     'className': class_id,
                     'score': score,
-                    'points': mask,
-                    'measurement': {
-                        'line_points': [measurement[0], measurement[1]],
-                        'size': measurement[2]
-                    }
+                    'points': mask
                 })
             
             return output_data
@@ -82,14 +93,13 @@ class MaskRCNNInferenceRoute(object):
 
     def _parse_masks(self, masks):
             oned_masks = []
-            measurements = []
             for i in range(masks.shape[2]):
                 mask = masks[:, :, i]
                 if np.sum(mask) > 0:
                     contours, _ = cv.findContours(mask.astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
                     oned_masks.append(self._convert_mask_img_to_2d_array_contours(contours))
-                    measurements.append(self._calc_longest_diagonal_pca(contours))
-            return oned_masks, measurements
+            
+            return oned_masks
     
     def _convert_mask_img_to_2d_array_contours(self, contours):
         oned_contours = []
@@ -98,25 +108,3 @@ class MaskRCNNInferenceRoute(object):
                 oned_contours.append(point[0].tolist())
         
         return oned_contours
-
-    def _calc_longest_diagonal_pca(self, contours):
-        contour = sorted(contours, key=lambda cnt: len(cnt), reverse=True)
-        contour = np.squeeze(contour[0])
-
-        if (len(contour.shape) == 1):
-            return tuple(contour), tuple(contour), 0
-        
-        pca = PCA(n_components=1)
-        pca.fit(contour)
-
-        principal_component = pca.components_[0]
-        contour_pca = np.dot(contour, principal_component)
-
-        start_index = np.argmin(contour_pca)
-        end_index = np.argmax(contour_pca)
-
-        start, end = contour[start_index].tolist(), contour[end_index].tolist()
-        start, end = tuple(start), tuple(end)
-        length = math.dist(start, end)
-
-        return [start, end, length]

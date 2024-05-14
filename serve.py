@@ -70,7 +70,7 @@ def start_server():
 def download_dependencies():
     print("Downloading weights for models...")
     weights = {
-        "./logs/weights/mask_rcnn_alita_and_poros_0004.h5": "https://github.com/Rene-Michel99/MaskRCNN-API/releases/download/weights/mask_rcnn_alita_and_poros_0004.h5",
+        "./logs/weights/mask_rcnn_alita.h5": "https://github.com/Rene-Michel99/MaskRCNN-API/releases/download/weights/mask_rcnn_alita.h5",
         "./logs/weights/mask_rcnn_coco.h5": "https://github.com/Rene-Michel99/Mask-RCNN-TF2.8/releases/download/pretrained_weights/mask_rcnn_coco.h5",
     }
 
