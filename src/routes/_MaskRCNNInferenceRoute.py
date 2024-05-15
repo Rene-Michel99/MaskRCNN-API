@@ -4,7 +4,6 @@ import base64
 import cv2 as cv
 import numpy as np
 from logging import Logger
-from sklearn.decomposition import PCA
 
 from mrcnn.model import MaskRCNN
 from ..exceptions import UnprocessableRequest, LockedException, BadRequestException
@@ -92,19 +91,20 @@ class MaskRCNNInferenceRoute:
             return parsed_class_ids
 
     def _parse_masks(self, masks):
-            oned_masks = []
-            for i in range(masks.shape[2]):
-                mask = masks[:, :, i]
-                if np.sum(mask) > 0:
-                    contours, _ = cv.findContours(mask.astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-                    oned_masks.append(self._convert_mask_img_to_2d_array_contours(contours))
-            
-            return oned_masks
+        oned_masks = []
+        for i in range(masks.shape[2]):
+            mask = masks[:, :, i]
+            if np.sum(mask) > 0:
+                contours, _ = cv.findContours(mask.astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+                oned_masks.append(self._convert_mask_img_to_2d_array_contours(contours))
+        
+        return oned_masks
     
-    def _convert_mask_img_to_2d_array_contours(self, contours):
+    def _convert_mask_img_to_2d_array_contours(self, contours, epsilon=5.5):
         oned_contours = []
         for cnt in contours:
-            for point in cnt:
+            cnt_approx = cv.approxPolyDP(cnt, epsilon, True)
+            for point in cnt_approx:
                 oned_contours.append(point[0].tolist())
         
         return oned_contours
