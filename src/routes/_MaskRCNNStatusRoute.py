@@ -19,4 +19,4 @@ class MaskRCNNStatusRoute:
                 'class_names': model.config.CLASS_NAMES
             }
         
-        return model
+        return response
