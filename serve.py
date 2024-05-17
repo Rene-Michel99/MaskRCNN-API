@@ -41,7 +41,6 @@ def sigterm_handler(nginx_pid, gunicorn_pid):
 def start_server():
     print('Starting the inference server with {} workers.'.format(model_server_workers))
 
-
     # link the log streams to stdout/err so they will be logged to the container logs
     subprocess.check_call(['ln', '-sf', '/dev/stdout', '/var/log/nginx/access.log'])
     subprocess.check_call(['ln', '-sf', '/dev/stderr', '/var/log/nginx/error.log'])
@@ -77,8 +76,8 @@ def download_dependencies():
     if not os.path.exists("logs"):
         os.system("mkdir logs")
         os.system("mkdir logs/weights")
-    if not os.path.exists("./payloads"):
-        os.system("mkdir payloads")
+    if not os.path.exists("./images"):
+        os.system("mkdir images")
 
     for file_path, url in weights.items():
         with urllib.request.urlopen(url) as resp, open(file_path, 'wb') as out:

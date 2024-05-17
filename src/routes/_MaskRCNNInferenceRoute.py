@@ -4,17 +4,18 @@ import base64
 import cv2 as cv
 import numpy as np
 from logging import Logger
-
 from mrcnn.model import MaskRCNN
+
 from ..exceptions import UnprocessableRequest, LockedException, BadRequestException
-from ..models import RouteLock
+from ..models import RouteLock, APIConfig
 
 
 class MaskRCNNInferenceRoute:
 
-    def __init__(self, logger: Logger) -> None:
+    def __init__(self, logger: Logger, api_config: APIConfig) -> None:
         self.logger = logger
         self.lock = RouteLock()
+        self.api_config = api_config
     
     def process(self, request: dict, model: MaskRCNN):
         if self.lock.locked:
@@ -35,7 +36,7 @@ class MaskRCNNInferenceRoute:
             raise BadRequestException(message="no classes found in request")
     
     def _parse_request(self, data: dict):
-        image_dir = "./payloads"
+        image_dir = self.api_config.images_dir
         image_path = None
         try:
             file_name, encoded_image = data['image'].split(',')
@@ -100,10 +101,10 @@ class MaskRCNNInferenceRoute:
         
         return oned_masks
     
-    def _convert_mask_img_to_2d_array_contours(self, contours, epsilon=5.5):
+    def _convert_mask_img_to_2d_array_contours(self, contours):
         oned_contours = []
         for cnt in contours:
-            cnt_approx = cv.approxPolyDP(cnt, epsilon, True)
+            cnt_approx = cv.approxPolyDP(cnt, self.api_config.approx_epsilon, True)
             for point in cnt_approx:
                 oned_contours.append(point[0].tolist())
         

@@ -5,5 +5,5 @@ import src.app as myapp
 # If you want to change the algorithm file, simply change "predictor" above to the
 # new file.
 
-
-app = myapp.api_server.app
+api_server = myapp.APIServer()
+app = api_server.app
