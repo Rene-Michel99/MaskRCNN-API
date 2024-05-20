@@ -12,11 +12,11 @@ class MaskRCNNStatusRoute:
         response = {}
         for key, model in model_cache.cache.items():
             response[key] = {
-                'is_compiled': model.is_compiled,
-                'model_dir': model.model_dir,
+                'isCompiled': model.is_compiled,
+                'modelDir': model.model_dir,
                 'mode': model.mode,
                 'weights': model.using_weights,
-                'class_names': model.config.CLASS_NAMES
+                'classNames': model.config.CLASS_NAMES
             }
         
         return response
