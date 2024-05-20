@@ -1,0 +1,188 @@
+openapi: 3.0.3
+info:
+  title: Mask RCNN API
+  description: |-
+    This is a server to use Mask RCNN to do instance segmentation on images sent in the request.
+    
+    Some useful links:
+    - [Mask RCNN API repository](https://github.com/Rene-Michel99/MaskRCNN-API)
+    - [Mask RCNN TF-2.8 Repository](https://github.com/Rene-Michel99/Mask-RCNN-TF2.8)
+  termsOfService: http://swagger.io/terms/
+  contact:
+    email: apiteam@swagger.io
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.11
+externalDocs:
+  description: Find out more about Swagger
+  url: http://swagger.io
+servers:
+  - url: http://127.0.0.1:8080
+tags:
+  - name: invocations
+    description: The process of instance segmentation
+  - name: ping
+    description: The status health of the server and Mask RCNN model
+  - name: updateConfig
+    description: Update the config of the server
+paths:
+  /invocations:
+    post:
+      tags:
+        - invocations
+      summary: Call the instance segmentation
+      description: Call the operation of instance segmentation on image
+      operationId: addPet
+      requestBody:
+        description: The image data
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Inference'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InferenceResponse'          
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: no image found in request
+        '422':
+          description: Validation exception
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Image may be corrupted
+        '423':
+          description: Mask RCNN is busy in previous request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                   type: string
+                   example: MaskRCNN model is already processing, try again later
+  /ping:
+    get:
+      tags:
+        - ping
+      summary: Returns status of server and model
+      description: Returns a object of configuration of model
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: object
+                    properties:
+                      isCompiled:
+                        type: boolean
+                        example: false
+                      modelDir:
+                        type: string
+                        example: ./logs
+                      mode:
+                        type: string
+                        example: inference
+                      weights:
+                        type: string
+                        example: ./logs/coco.h5
+                      classNames:
+                        type: string
+                        format: array
+                        example: ["person", "car", "bus", "bed"]
+  /updateConfig:
+    put:
+      tags:
+        - updateConfig
+      summary: Update config of the server
+      description: Update config of the server used in instance segmentation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Config'
+      responses:
+        '203':
+          description: successful operation
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                   type: string
+                   example: Request config key is not valid config
+components:
+  schemas:
+    Config:
+      type: object
+      properties:
+        approx_epsilon:
+          type: number
+          format: float32
+          example: 4
+    Inference:
+      required:
+        - name
+        - photoUrls
+      type: object
+      properties:
+        classes:
+          type: string
+          format: array
+          example: ["person"]
+        image:
+          type: string
+          example: data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAA
+    InferenceResponse:
+      type: object
+      properties:
+        imgSize:
+          type: number
+          format: array
+          example: [183, 332, 3]
+        inferences:
+          $ref: '#/components/schemas/InferencesResponse'
+    InferencesResponse:
+      type: object
+      properties:
+        bbox:
+          type: number
+          format: array
+          example: [10, 78, 181, 198]
+        className:
+          type: string
+          example: person
+        id:
+          type: string
+          example: c3ab924d-86b2-4e61-aba6-5f231ca0601a
+        score:
+          type: number
+          example: 0.9999731183052063
+        points:
+          type: number
+          format: array
+          example: [[146, 10], [127, 16], [112, 37]]
