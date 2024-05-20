@@ -12,8 +12,8 @@ This repository uses a pre-trained implementation of Mask RCNN to perform instan
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/seu-usuario/nome-do-repositorio.git
-   cd nome-do-repositorio
+   https://github.com/Rene-Michel99/MaskRCNN-API
+   cd MaskRCNN-API
    ```
 
 2. **Install dependencies:**
