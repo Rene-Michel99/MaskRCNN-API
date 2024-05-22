@@ -10,7 +10,7 @@ WEIGHTS = {
     "coco": "./logs/weights/mask_rcnn_coco.h5",
 }
 CONFIGS = {
-    "alita": Config(images_per_gpu=1, name="alita", num_classes=3, class_names=['BG', 'Idiomorfica', 'Subdiomorfica', 'Xenomorfica']),
+    "alita": Config(images_per_gpu=1, name="alita", num_classes=3, class_names=['BG', 'alita']),
     "coco": Config(images_per_gpu=1, name="coco", num_classes=80, class_names=[
         'BG', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
         'bus', 'train', 'truck', 'boat', 'traffic light',
