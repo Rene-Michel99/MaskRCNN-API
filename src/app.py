@@ -1,5 +1,4 @@
 import os
-import uuid
 import json
 import logging
 from flask import Flask, request
@@ -20,17 +19,19 @@ class APIServer:
         self.app = Flask(__name__)
         self.cors = CORS(self.app)
         
+        worker_name = "WORKER_{}".format(str(os.getpid())) 
         log_dir = os.path.join(
             "logs",
-            str(uuid.uuid4()),
+            worker_name,
         )
         self.api_config = APIConfig(
             approx_epsilon=4,
             log_dir=log_dir,
             images_dir="./images",
+            max_instances_model=int(os.environ.get("MODEL_MAX_QTY", 1)),
         )
 
-        self.logger = logging.getLogger('MaskRCNNBackend')
+        self.logger = logging.getLogger(worker_name)
         self.logger.setLevel(logging.DEBUG)
         handler = logging.StreamHandler()
 
@@ -39,7 +40,7 @@ class APIServer:
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
 
-        self.model_cache = ModelCache(self.logger, self.api_config.log_dir)
+        self.model_cache = ModelCache(self.logger, self.api_config)
 
         self.inference_route = MaskRCNNInferenceRoute(self.logger, self.api_config)
         self.config_route = ConfigRoute(self.api_config, self.logger)

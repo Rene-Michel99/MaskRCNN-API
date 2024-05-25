@@ -4,23 +4,18 @@ import base64
 import cv2 as cv
 import numpy as np
 from logging import Logger
-from mrcnn.model import MaskRCNN
 
-from ..exceptions import UnprocessableRequest, LockedException, BadRequestException
-from ..models import RouteLock, APIConfig
+from ..exceptions import UnprocessableRequest, BadRequestException
+from ..models import APIConfig, ModelWrapper
 
 
 class MaskRCNNInferenceRoute:
 
     def __init__(self, logger: Logger, api_config: APIConfig) -> None:
         self.logger = logger
-        self.lock = RouteLock()
         self.api_config = api_config
     
-    def process(self, request: dict, model: MaskRCNN):
-        if self.lock.locked:
-            raise LockedException("MaskRCNN model is already processing, try again later.")
-        
+    def process(self, request: dict, model: ModelWrapper):
         self._validate_request(request)
         
         image_path = self._parse_request(request)
@@ -62,34 +57,34 @@ class MaskRCNNInferenceRoute:
         return image_path
 
     def _parse_detections(self, results, img_shape, model):
-            self.logger.info("starting to parse results of inference")
-            
-            rois = results["rois"].tolist() if type(results["rois"]) != list else results["rois"]
-            class_ids = self._parse_class_ids(results["class_ids"], model)
-            scores = results["scores"].tolist() if type(results["scores"]) != list else results["scores"]
-            masks = self._parse_masks(results["masks"])
+        self.logger.info("starting to parse results of inference")
+        
+        rois = results["rois"].tolist() if type(results["rois"]) != list else results["rois"]
+        class_ids = self._parse_class_ids(results["class_ids"], model)
+        scores = results["scores"].tolist() if type(results["scores"]) != list else results["scores"]
+        masks = self._parse_masks(results["masks"])
 
-            output_data = {
-                'inferences': [],
-                'imgSize': img_shape
-            }
-            for roi, class_id, score, mask in zip(rois, class_ids, scores, masks):
-                output_data['inferences'].append({
-                    'id': str(uuid.uuid4()),
-                    'bbox': roi,
-                    'className': class_id,
-                    'score': score,
-                    'points': mask
-                })
-            
-            return output_data
+        output_data = {
+            'inferences': [],
+            'imgSize': img_shape
+        }
+        for roi, class_id, score, mask in zip(rois, class_ids, scores, masks):
+            output_data['inferences'].append({
+                'id': str(uuid.uuid4()),
+                'bbox': roi,
+                'className': class_id,
+                'score': score,
+                'points': mask
+            })
+        
+        return output_data
 
     def _parse_class_ids(self, class_ids, model):
-            parsed_class_ids = []
-            for class_id in class_ids:
-                parsed_class_ids.append(model.config.CLASS_NAMES[class_id])
-            
-            return parsed_class_ids
+        parsed_class_ids = []
+        for class_id in class_ids:
+            parsed_class_ids.append(model.config.CLASS_NAMES[class_id])
+        
+        return parsed_class_ids
 
     def _parse_masks(self, masks):
         oned_masks = []

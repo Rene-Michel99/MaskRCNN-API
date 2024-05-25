@@ -20,11 +20,17 @@ import subprocess
 import urllib.request
 import shutil
 import sys
+import json
+from dotenv import load_dotenv
+
+
+if os.path.exists(".env"):
+    load_dotenv()
 
 cpu_count = multiprocessing.cpu_count()
 
-model_server_timeout = os.environ.get('MODEL_SERVER_TIMEOUT', 60)
-model_server_workers = int(os.environ.get('MODEL_SERVER_WORKERS', cpu_count))
+model_server_timeout = os.environ.get('SERVER_TIMEOUT', 60)
+model_server_workers = int(os.environ.get('SERVER_WORKERS', cpu_count))
 
 def sigterm_handler(nginx_pid, gunicorn_pid):
     try:
@@ -68,10 +74,9 @@ def start_server():
 
 def download_dependencies():
     print("Downloading weights for models...")
-    weights = {
-        "./logs/weights/mask_rcnn_alita.h5": "https://github.com/Rene-Michel99/MaskRCNN-API/releases/download/weights/mask_rcnn_alita.h5",
-        "./logs/weights/mask_rcnn_coco.h5": "https://github.com/Rene-Michel99/Mask-RCNN-TF2.8/releases/download/pretrained_weights/mask_rcnn_coco.h5",
-    }
+    config = {}
+    with open("./config.json", "r") as f:
+        config = json.loads(f.read())
 
     if not os.path.exists("logs"):
         os.system("mkdir logs")
@@ -79,7 +84,8 @@ def download_dependencies():
     if not os.path.exists("./images"):
         os.system("mkdir images")
 
-    for file_path, url in weights.items():
+    for file_name, url in config["weights"].items():
+        file_path = os.path.join("logs", "weights", file_name)
         with urllib.request.urlopen(url) as resp, open(file_path, 'wb') as out:
             shutil.copyfileobj(resp, out)
     
