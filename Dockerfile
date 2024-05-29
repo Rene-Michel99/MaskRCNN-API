@@ -5,6 +5,8 @@ EXPOSE 8080
 RUN mkdir /app
 
 COPY ./src /app/src
+COPY .env /app/.env
+COPY config.json /app/config.json
 COPY nginx.conf /app/nginx.conf
 COPY serve.py /app/serve.py
 COPY wsgi.py /app/wsgi.py

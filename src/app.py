@@ -1,15 +1,15 @@
 import os
-import uuid
 import json
 import logging
 from flask import Flask, request
 from flask_cors import CORS, cross_origin
+from dotenv import load_dotenv
 
 from .models import ModelCache, APIConfig
 from .routes import MaskRCNNInferenceRoute, MaskRCNNStatusRoute, ConfigRoute
 
 
-# create image: docker image build -t maskrcnn-backend:latest .
+# docker image build -t maskrcnn-backend:latest .
 # docker run -dp 127.0.0.1:8080:8080 maskrcnn-backend:latest
 # docker run -it maskrcnn-backend:latest bash   
 #cp src/. container_id:/target
@@ -19,27 +19,28 @@ class APIServer:
     def __init__(self):
         self.app = Flask(__name__)
         self.cors = CORS(self.app)
+        load_dotenv()
+        self.port = os.environ.get("SERVER_PORT", 8080)
         
+        worker_name = "WORKER_{}".format(str(os.getpid())) 
         log_dir = os.path.join(
+            os.getcwd(),
             "logs",
-            str(uuid.uuid4()),
+            worker_name,
         )
+        if not os.path.exists(log_dir):
+            os.mkdir(log_dir)
+        
         self.api_config = APIConfig(
             approx_epsilon=4,
             log_dir=log_dir,
             images_dir="./images",
+            max_instances_model=int(os.environ.get("MODEL_MAX_QTY", 1)),
         )
 
-        self.logger = logging.getLogger('MaskRCNNBackend')
-        self.logger.setLevel(logging.DEBUG)
-        handler = logging.StreamHandler()
+        self.logger = self._build_logger(worker_name, log_dir)
 
-        handler.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
-
-        self.model_cache = ModelCache(self.logger, self.api_config.log_dir)
+        self.model_cache = ModelCache(self.logger, self.api_config)
 
         self.inference_route = MaskRCNNInferenceRoute(self.logger, self.api_config)
         self.config_route = ConfigRoute(self.api_config, self.logger)
@@ -49,10 +50,29 @@ class APIServer:
         self.app.route("/ping", methods=["GET"])(self.status)
         self.app.route("/updateConfig", methods=["PUT"])(self.update_config)
 
-        self.logger.info("Server is ready!")
+        self.logger.info(f"{worker_name} is ready listening on port {str(self.port)}")
+    
+    def _build_logger(self, worker_name: str, log_dir: str):
+        logger = logging.getLogger(worker_name)
+        logger.setLevel(logging.DEBUG)
+        handler = logging.StreamHandler()
+
+        handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+        file_handler = logging.FileHandler(
+            filename=os.path.join(log_dir, worker_name + ".log"),
+            encoding='utf-8'
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+        return logger
 
     def run(self):
-        self.app.run(host="0.0.0.0", port=8080, debug=True)
+        self.app.run(host="0.0.0.0", port=self.port, debug=False)
 
     @cross_origin()
     def inference(self):
