@@ -13,7 +13,6 @@
 # number of workers        MODEL_SERVER_WORKERS              the number of CPU cores
 # timeout                  MODEL_SERVER_TIMEOUT              60 seconds
 
-import multiprocessing
 import os
 import signal
 import subprocess
@@ -21,6 +20,10 @@ import urllib.request
 import shutil
 import sys
 import json
+import socket
+import random
+import threading
+import multiprocessing
 from dotenv import load_dotenv
 
 
@@ -31,6 +34,14 @@ cpu_count = multiprocessing.cpu_count()
 
 model_server_timeout = os.environ.get('SERVER_TIMEOUT', 60)
 model_server_workers = int(os.environ.get('SERVER_WORKERS', cpu_count))
+adjs = [
+    'Saltitante', 'Cansado', 'Risonho', 'Berrante', 'Trombudo', 'Zangado', 'Pulante',
+    'Fedorento', 'Choroso', 'Avexado', 'Atrevido', 'Careca', 'Calvo'
+]
+subts = [
+    'Cavalo', 'Pinguim', 'Peixe', 'Urso', 'Lhamazinha', 'Sardinha',
+    'Papagaio', 'Arara', 'Pato', 'Ursinho', 'Galinha'
+]
 
 def sigterm_handler(nginx_pid, gunicorn_pid):
     try:
@@ -92,8 +103,31 @@ def download_dependencies():
     print("All weights downloaded!")
 
 
+def wait_to_send_worker_names():
+    random.seed(42)
+    server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_sock.bind(('localhost', 3000))
+    server_sock.listen(model_server_workers)
+    print("Waiting connection from workers...")
+
+    for _ in range(model_server_workers):
+        conn, _ = server_sock.accept()
+        worker_name = random.choice(subts) + random.choice(adjs)
+        print("Connection received! Replying with worker id {}".format(worker_name))
+        conn.sendall(worker_name.encode())
+        conn.close()
+    server_sock.close()
+
+
+def start_worker_namer():
+    th = threading.Thread(target=wait_to_send_worker_names)
+    th.daemon = True
+    th.start()
+
+
 # The main routine to invoke the start function.
 
 if __name__ == '__main__':
+    start_worker_namer()
     download_dependencies()
     start_server()
