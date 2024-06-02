@@ -5,6 +5,7 @@ EXPOSE 8080
 RUN mkdir /app
 
 COPY ./src /app/src
+COPY ./templates /app/src/templates
 COPY .env /app/.env
 COPY config.json /app/config.json
 COPY nginx.conf /app/nginx.conf

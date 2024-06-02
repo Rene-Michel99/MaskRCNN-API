@@ -3,8 +3,7 @@ import time
 import json
 import socket
 import logging
-import multiprocessing
-from flask import Flask, request
+from flask import Flask, request, render_template
 from flask_cors import CORS, cross_origin
 from dotenv import load_dotenv
 
@@ -12,9 +11,9 @@ from .models import ModelCache, APIConfig
 from .routes import MaskRCNNInferenceRoute, MaskRCNNStatusRoute, ConfigRoute, GetWorkersRoute
 
 
-# docker image build -t maskrcnn-backend:latest .
-# docker run -dp 127.0.0.1:8080:8080 maskrcnn-backend:latest
-# docker run -it maskrcnn-backend:latest bash   
+# docker image build -t maskrcnn:latest .
+# docker run -dp 127.0.0.1:8080:8080 maskrcnn:latest
+# docker run -it maskrcnn:latest bash   
 #cp src/. container_id:/target
 
 
@@ -57,6 +56,7 @@ class APIServer:
         self.app.route("/status", methods=["GET"])(self.status)
         self.app.route("/updateConfig", methods=["PUT"])(self.update_config)
         self.app.route("/workers", methods=["GET"])(self.get_workers)
+        self.app.route("/doc", methods=["GET"])(self.document)
 
         self.logger.info(f"{self.worker_name} is ready listening on port {str(self.port)}")
     
@@ -132,6 +132,13 @@ class APIServer:
     def get_workers(self):
         try:
             return self.get_workers_route.process(), 200
+        except Exception as ex:
+            return self._parse_exception(ex)
+    
+    @cross_origin()
+    def document(self):
+        try:
+            return render_template("index.html")
         except Exception as ex:
             return self._parse_exception(ex)
     

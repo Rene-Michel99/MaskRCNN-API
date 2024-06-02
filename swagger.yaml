@@ -8,8 +8,6 @@ info:
     - [Mask RCNN API repository](https://github.com/Rene-Michel99/MaskRCNN-API)
     - [Mask RCNN TF-2.8 Repository](https://github.com/Rene-Michel99/Mask-RCNN-TF2.8)
   termsOfService: http://swagger.io/terms/
-  contact:
-    email: apiteam@swagger.io
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -20,17 +18,19 @@ externalDocs:
 servers:
   - url: http://127.0.0.1:8080
 tags:
-  - name: invocations
+  - name: inference
     description: The process of instance segmentation
-  - name: ping
+  - name: status
     description: The status health of the server and Mask RCNN model
   - name: updateConfig
     description: Update the config of the server
+  - name: workers
+    description: Status of each worker in the server
 paths:
-  /invocations:
+  /inference:
     post:
       tags:
-        - invocations
+        - inference
       summary: Call the instance segmentation
       description: Call the operation of instance segmentation on image
       operationId: addPet
@@ -78,10 +78,10 @@ paths:
                   error:
                    type: string
                    example: MaskRCNN model is already processing, try again later
-  /ping:
+  /status:
     get:
       tags:
-        - ping
+        - status
       summary: Returns status of server and model
       description: Returns a object of configuration of model
       responses:
@@ -135,6 +135,27 @@ paths:
                   error:
                    type: string
                    example: Request config key is not valid config
+  /workers:
+    get:
+      tags:
+        - workers
+      summary: Status of each worker in the server
+      description: Status of each worker in the server
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  CavaloCareca:
+                    type: string
+                    example: alive
+                  GalinhaCansado:
+                    type: string
+                    example: dead
+          
 components:
   schemas:
     Config:
@@ -156,14 +177,14 @@ components:
           example: ["person"]
         image:
           type: string
-          example: data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAA
+          example: data:image/jpeg;base64,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
     InferenceResponse:
       type: object
       properties:
         imgSize:
           type: number
           format: array
-          example: [183, 332, 3]
+          example: [64, 96, 3]
         inferences:
           $ref: '#/components/schemas/InferencesResponse'
     InferencesResponse:
@@ -172,7 +193,7 @@ components:
         bbox:
           type: number
           format: array
-          example: [10, 78, 181, 198]
+          example: [7, 19, 64, 80]
         className:
           type: string
           example: person
@@ -181,8 +202,8 @@ components:
           example: c3ab924d-86b2-4e61-aba6-5f231ca0601a
         score:
           type: number
-          example: 0.9999731183052063
+          example: 0.9294093251228333
         points:
           type: number
           format: array
-          example: [[146, 10], [127, 16], [112, 37]]
+          example: [[22, 32], [51, 61], [76, 58], [74, 42], [54, 28], [52, 11]]

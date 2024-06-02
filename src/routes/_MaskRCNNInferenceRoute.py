@@ -34,11 +34,12 @@ class MaskRCNNInferenceRoute:
         image_dir = self.api_config.images_dir
         image_path = None
         try:
-            file_name, encoded_image = data['image'].split(',')
+            file_ext, encoded_image = data['image'].split(',')
 
-            file_name = file_name.replace('data:', '')
-            file_name = file_name.replace('/', '.')
-            file_name = file_name.replace(';base64', '')
+            file_ext = file_ext.replace('data:image', '')
+            file_ext = file_ext.replace('/', '.')
+            file_ext = file_ext.replace(';base64', '')
+            file_name = str(uuid.uuid4()) + file_ext
             
             image_path = os.path.join(image_dir, file_name)
             with open(image_path, 'wb') as f:
