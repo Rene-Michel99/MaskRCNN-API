@@ -33,7 +33,6 @@ paths:
         - inference
       summary: Call the instance segmentation
       description: Call the operation of instance segmentation on image
-      operationId: addPet
       requestBody:
         description: The image data
         content:
