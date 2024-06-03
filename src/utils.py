@@ -8,7 +8,7 @@ def handle_exception(success_code=200, unknow_error_code=500):
             try:
                 return func(*args, **kwargs), success_code
             except Exception as ex:
-                if hasattr(args([0]), "logger"):
+                if hasattr(args[0], "logger"):
                     args[0].logger.exception(ex)
                 
                 ex_message = ex.message if hasattr(ex, "message") else str(ex)
