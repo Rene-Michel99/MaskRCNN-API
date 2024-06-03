@@ -1,6 +1,6 @@
 {
     "weights": {
-        "mask_rcnn_alita.h5": "https://github.com/Rene-Michel99/MaskRCNN-API/releases/download/weights/mask_rcnn_alita.h5"
+        "mask_rcnn_coco.h5": "https://github.com/Rene-Michel99/Mask-RCNN-TF2.8/releases/download/pretrained_weights/mask_rcnn_coco.h5"
     },
     "modelsConfig": [
         {
