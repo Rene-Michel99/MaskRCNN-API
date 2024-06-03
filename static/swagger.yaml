@@ -154,6 +154,8 @@ paths:
                   GalinhaCansado:
                     type: string
                     example: dead
+        '500':
+          description: Internal error or server is b
           
 components:
   schemas:

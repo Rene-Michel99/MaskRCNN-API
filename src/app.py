@@ -8,6 +8,7 @@ from flask_swagger_ui import get_swaggerui_blueprint
 from flask import Flask, request, send_from_directory
 from dotenv import load_dotenv
 
+from .utils import handle_exception
 from .models import ModelCache, APIConfig
 from .routes import MaskRCNNInferenceRoute, MaskRCNNStatusRoute, ConfigRoute, GetWorkersRoute
 
@@ -123,47 +124,29 @@ class APIServer:
         self.app.run(host="0.0.0.0", port=self.port, debug=False)
 
     @cross_origin()
+    @handle_exception()
     def inference(self):
-        try:
-            data = json.loads(request.data)
-            model = self.model_cache.get_model_based_on_data(data)
-            return self.inference_route.process(data, model), 200
-        except Exception as ex:
-            return self._parse_exception(ex)
+        data = json.loads(request.data)
+        model = self.model_cache.get_model_based_on_data(data)
+        return self.inference_route.process(data, model)
     
     @cross_origin()
+    @handle_exception()
     def status(self):
-        try:
-            return self.status_route.process(self.model_cache), 200
-        except Exception as ex:
-            return self._parse_exception(ex)
+        return self.status_route.process(self.model_cache)
     
     @cross_origin()
+    @handle_exception(success_code=203)
     def update_config(self):
-        try:
-            data = json.loads(request.data)
-            return self.config_route.process(data), 203
-        except Exception as ex:
-            return self._parse_exception(ex)
+        data = json.loads(request.data)
+        return self.config_route.process(data)
     
     @cross_origin()
+    @handle_exception()
     def get_workers(self):
-        try:
-            return self.get_workers_route.process(), 200
-        except Exception as ex:
-            return self._parse_exception(ex)
+        return self.get_workers_route.process()
     
     @cross_origin()
+    @handle_exception()
     def get_static(self, path):
-        try:
-            return send_from_directory(path)
-        except Exception as ex:
-            return self._parse_exception(ex)
-    
-    def _parse_exception(self, ex: Exception):
-        self.logger.exception(ex)
-        
-        ex_message = ex.message if hasattr(ex, "message") else str(ex)
-        error_code = ex.error_code if hasattr(ex, "error_code") else 500
-        
-        return {"error": ex_message}, error_code
+        return send_from_directory(path)

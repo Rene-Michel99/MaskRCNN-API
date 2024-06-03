@@ -18,13 +18,13 @@ class MaskRCNNInferenceRoute:
     def process(self, request: dict, model: ModelWrapper):
         self._validate_request(request)
         
-        image_path = self._parse_request(request)
-        image = cv.imread(image_path)
+        image = self._parse_request(request)
         results = model.detect([image], verbose=1)[0]
 
         return self._parse_detections(results, image.shape, model)
     
     def _validate_request(self, data):
+        self.logger.info("Validating request")
         if 'image' not in data.keys():
             raise BadRequestException(message="no image found in request")
         if 'classes' not in data.keys():
@@ -32,7 +32,6 @@ class MaskRCNNInferenceRoute:
     
     def _parse_request(self, data: dict):
         image_dir = self.api_config.images_dir
-        image_path = None
         try:
             file_ext, encoded_image = data['image'].split(',')
 
@@ -45,17 +44,13 @@ class MaskRCNNInferenceRoute:
             with open(image_path, 'wb') as f:
                 f.write(base64.b64decode(encoded_image))
             
-            test_img = cv.imread(image_path)
+            return cv.imread(image_path)
         except ValueError as ex:
-            self.logger.exception(ex)
             raise BadRequestException(
                  "The image data must be encoded in base64 with pattern data:filename/png;base64,image_base64_data"
             )
         except Exception as ex:
-             self.logger.exception(ex)
-             raise UnprocessableRequest("image can't be used, maybe is corrupted")
-            
-        return image_path
+            raise UnprocessableRequest("image can't be used, maybe is corrupted")
 
     def _parse_detections(self, results, img_shape, model):
         self.logger.info("starting to parse results of inference")
