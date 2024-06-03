@@ -11,6 +11,7 @@ class GetWorkersRoute:
         if not self.workers:
             workers = os.listdir("/app/logs")
             workers.remove("weights")
+            workers.remove("serve.log")
             for worker in workers:
                 with open(f"/app/logs/{worker}/pid", "r") as f:
                     pid = f.read().replace("\n", "").strip()

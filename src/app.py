@@ -3,8 +3,9 @@ import time
 import json
 import socket
 import logging
-from flask import Flask, request, render_template
 from flask_cors import CORS, cross_origin
+from flask_swagger_ui import get_swaggerui_blueprint
+from flask import Flask, request, send_from_directory
 from dotenv import load_dotenv
 
 from .models import ModelCache, APIConfig
@@ -25,17 +26,7 @@ class APIServer:
         self.port = os.environ.get("SERVER_PORT", 8080)
         
         self.worker_name = self._get_worker_name()
-        log_dir = os.path.join(
-            os.getcwd(),
-            "logs",
-            self.worker_name,
-        )
-        if not os.path.exists(log_dir):
-            os.mkdir(log_dir)
-        
-        with open(os.path.join(log_dir, "pid"), "w") as f:
-            f.write(str(os.getpid()))
-        
+        log_dir = self._get_log_dir()
         self.api_config = APIConfig(
             approx_epsilon=4,
             log_dir=log_dir,
@@ -56,13 +47,40 @@ class APIServer:
         self.app.route("/status", methods=["GET"])(self.status)
         self.app.route("/updateConfig", methods=["PUT"])(self.update_config)
         self.app.route("/workers", methods=["GET"])(self.get_workers)
-        self.app.route("/doc", methods=["GET"])(self.document)
+        self.app.route("/static/<path:path>")(self.get_static)
+        self.app.register_blueprint(
+            self._get_swagger_blueprint(),
+            url_prefix="/doc"
+        )
 
         self.logger.info(f"{self.worker_name} is ready listening on port {str(self.port)}")
     
+    def _get_log_dir(self):
+        log_dir = os.path.join(
+            os.getcwd(),
+            "logs",
+            self.worker_name,
+        )
+        if not os.path.exists(log_dir):
+            os.mkdir(log_dir)
+        
+        with open(os.path.join(log_dir, "pid"), "w") as f:
+            f.write(str(os.getpid()))
+        
+        return log_dir
+    
+    def _get_swagger_blueprint(self):
+        return get_swaggerui_blueprint(
+            '/doc',
+            '/static/swagger.yaml',
+            config={
+                'app_name': "MaskRCNNAPI"
+            }
+        )
+    
     def _get_worker_name(self, timeout=10):
         client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        print("Connecting to main server to get id...")
+        print("Connecting to main server to get unique id...")
         client_sock.connect(('localhost', 3000))
         worker_name = None
         timer = 0
@@ -136,9 +154,9 @@ class APIServer:
             return self._parse_exception(ex)
     
     @cross_origin()
-    def document(self):
+    def get_static(self, path):
         try:
-            return render_template("index.html")
+            return send_from_directory(path)
         except Exception as ex:
             return self._parse_exception(ex)
     

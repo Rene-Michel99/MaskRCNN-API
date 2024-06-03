@@ -17,6 +17,7 @@ import os
 import signal
 import subprocess
 import urllib.request
+import logging
 import shutil
 import sys
 import json
@@ -43,6 +44,26 @@ subts = [
     'Papagaio', 'Arara', 'Pato', 'Ursinho', 'Galinha'
 ]
 
+if not os.path.exists("/app/logs"):
+    os.mkdir("/app/logs")
+
+logger = logging.getLogger("SERVE")
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+file_handler = logging.FileHandler(
+    filename=os.path.join("/app/logs/serve.log"),
+    encoding='utf-8'
+)
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
+
 def sigterm_handler(nginx_pid, gunicorn_pid):
     try:
         os.kill(nginx_pid, signal.SIGQUIT)
@@ -56,7 +77,7 @@ def sigterm_handler(nginx_pid, gunicorn_pid):
     sys.exit(0)
 
 def start_server():
-    print('Starting the inference server with {} workers.'.format(model_server_workers))
+    logger.info('Starting the inference server with {} workers.'.format(model_server_workers))
 
     # link the log streams to stdout/err so they will be logged to the container logs
     subprocess.check_call(['ln', '-sf', '/dev/stdout', '/var/log/nginx/access.log'])
@@ -80,27 +101,31 @@ def start_server():
             break
 
     sigterm_handler(nginx.pid, gunicorn.pid)
-    print('Inference server exiting')
+    logger.info('Inference server exiting')
 
 
 def download_dependencies():
-    print("Downloading weights for models...")
+    logger.info("Downloading weights for models...")
     config = {}
     with open("./config.json", "r") as f:
         config = json.loads(f.read())
 
-    if not os.path.exists("logs"):
-        os.system("mkdir logs")
+    if not os.path.exists("logs/weights"):
         os.system("mkdir logs/weights")
     if not os.path.exists("./images"):
         os.system("mkdir images")
 
+    index = 0
+    total = len(config["weights"])
     for file_name, url in config["weights"].items():
         file_path = os.path.join("logs", "weights", file_name)
         with urllib.request.urlopen(url) as resp, open(file_path, 'wb') as out:
             shutil.copyfileobj(resp, out)
+        
+        logger.info("{} weight downloaded! [{}/{}]".format(file_name, index + 1, total))
+        index += 1
     
-    print("All weights downloaded!")
+    logger.info("All weights downloaded!")
 
 
 def wait_to_send_worker_names():
@@ -108,12 +133,12 @@ def wait_to_send_worker_names():
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.bind(('localhost', 3000))
     server_sock.listen(model_server_workers)
-    print("Waiting connection from workers...")
+    logger.info("Waiting connection from workers...")
 
     for _ in range(model_server_workers):
         conn, _ = server_sock.accept()
         worker_name = random.choice(subts) + random.choice(adjs)
-        print("Connection received! Replying with worker id {}".format(worker_name))
+        logger.info("Connection received! Replying with worker id {}".format(worker_name))
         conn.sendall(worker_name.encode())
         conn.close()
     server_sock.close()

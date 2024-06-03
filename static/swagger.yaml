@@ -182,18 +182,27 @@ components:
       type: object
       properties:
         imgSize:
-          type: number
-          format: array
-          example: [64, 96, 3]
+          type: array
+          items:
+            type: integer
+          example:
+            - 64
+            - 96
+            - 3
         inferences:
           $ref: '#/components/schemas/InferencesResponse'
     InferencesResponse:
       type: object
       properties:
         bbox:
-          type: number
-          format: array
-          example: [7, 19, 64, 80]
+          type: array
+          items:
+            type: integer
+          example:
+            - 7
+            - 19
+            - 64
+            - 80
         className:
           type: string
           example: person
@@ -204,6 +213,15 @@ components:
           type: number
           example: 0.9294093251228333
         points:
-          type: number
-          format: array
-          example: [[22, 32], [51, 61], [76, 58], [74, 42], [54, 28], [52, 11]]
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+          example:
+            - [22, 32]
+            - [51, 61]
+            - [76, 58]
+            - [74, 42]
+            - [54, 28]
+            - [52, 11]
