@@ -21,7 +21,7 @@ class GetWorkersRoute:
         
         response = {worker: {"status": "dead"} for worker in self.workers.values()}
         for proc in psutil.process_iter(["pid", "status"]):
-            proc_pid = str(proc.pid)
+            proc_pid = str(proc.info["pid"])
             if proc_pid in self.workers:
                 creation_time = datetime.datetime.strptime(
                     time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(proc.create_time())),
