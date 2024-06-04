@@ -106,6 +106,12 @@ paths:
                       weights:
                         type: string
                         example: ./logs/coco.h5
+                      locked:
+                        type: boolean
+                        example: false
+                      lastTimeLocked:
+                        type: string
+                        example: "2024-06-04T12:55:26.135219"
                       classNames:
                         type: string
                         format: array
@@ -149,11 +155,35 @@ paths:
                 type: object
                 properties:
                   CavaloCareca:
-                    type: string
-                    example: alive
+                    type: object
+                    properties:
+                      createdAt:
+                        type: string
+                        example: "2024-06-04T23:05:54"
+                      memUsage:
+                        type: number
+                        example: 382.234375
+                      status:
+                        type: string
+                        example: running
+                      timeRunning:
+                        type: string
+                        example: "0:02:18.187265"
                   GalinhaCansado:
-                    type: string
-                    example: dead
+                    type: object
+                    properties:
+                      createdAt:
+                        type: string
+                        example: "2024-06-04T23:05:54"
+                      memUsage:
+                        type: number
+                        example: 1270.43359375
+                      status:
+                        type: string
+                        example: "sleeping"
+                      timeRunning:
+                        type: string
+                        example: "0:02:18.186927"
         '500':
           description: Internal error or server is busy
           

@@ -120,6 +120,9 @@ def download_dependencies():
     for file_name, url in config["weights"].items():
         logger.info("Starting to download {} [{}/{}]".format(file_name, index + 1, total))
         file_path = os.path.join("logs", "weights", file_name)
+        if os.path.exists(file_path):
+            continue
+        
         with urllib.request.urlopen(url) as resp, open(file_path, 'wb') as out:
             shutil.copyfileobj(resp, out)
         
