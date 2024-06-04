@@ -44,11 +44,7 @@ class ModelCache:
         if not model_key:
             raise NotFoundException("There is no model with classes {}".format(classes))
         
-        model = self._get_available_model(model_key)
-        if model is None:
-            raise ServiceUnavailableException("All models instances are locked!")
-        
-        return model
+        return self._get_available_model(model_key)
     
     def _create_cached_model(self, key: str):
         self.logger.info(f"Creating and caching model for weights {key}")
@@ -68,6 +64,28 @@ class ModelCache:
     def _can_create_new_model(self):
         return sum([len(models) for models in self.cache.values()]) < self.api_config.max_instances_model
     
+    def _clean_cache(self):
+        if len(self.cache.keys()) == 1:
+            self.cache.clear()
+        else:
+            minor_timestamp = None
+            minor_key = None
+            model_index = None
+            for key, models in self.cache.items():
+                if minor_timestamp is None and models:
+                    minor_timestamp = models[0].lock.last_time_locked
+
+                for i, model in enumerate(models):
+                    if minor_timestamp <= model.lock.last_time_locked and not model.lock.locked:
+                        minor_timestamp = model.lock.last_time_locked
+                        minor_key = key
+                        model_index = i
+            
+            if minor_key:
+                self.cache[minor_key].pop(model_index)
+            else:
+                raise ServiceUnavailableException("All models are locked and cache can't be cleaned")
+    
     def _get_available_model(self, key: str) -> ModelWrapper:
         models = self.cache.get(key, [])
         for model in models:
@@ -77,5 +95,7 @@ class ModelCache:
         if self._can_create_new_model():
             return self._create_cached_model(key)
         
-        return None
+        self.logger.info("Cache limit reached, cleaning and creating new model")
+        self._clean_cache()
+        return self._create_cached_model(key)
         

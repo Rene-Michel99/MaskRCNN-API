@@ -8,10 +8,7 @@ class ModelLock:
 
     @property
     def last_time_locked(self):
-        if self._last_time_locked:
-            return self._last_time_locked.isoformat()
-        
-        return None
+        return self._last_time_locked
     
     @last_time_locked.setter
     def last_time_locked(self, value):
