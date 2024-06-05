@@ -1,7 +1,11 @@
 {
-    "weights": {
-        "mask_rcnn_coco.h5": "https://github.com/Rene-Michel99/Mask-RCNN-TF2.8/releases/download/pretrained_weights/mask_rcnn_coco.h5"
-    },
+    "weights": [
+        {
+            "name": "mask_rcnn_coco",
+            "url": "https://github.com/Rene-Michel99/Mask-RCNN-TF2.8/releases/download/pretrained_weights/mask_rcnn_coco.h5",
+            "requestType": "fileTransfer"
+        }
+    ],
     "modelsConfig": [
         {
             "name": "coco",

@@ -16,6 +16,7 @@
 import os
 import signal
 import subprocess
+import requests
 import urllib.request
 import logging
 import shutil
@@ -117,19 +118,40 @@ def download_dependencies():
 
     index = 0
     total = len(config["weights"])
-    for file_name, url in config["weights"].items():
-        logger.info("Starting to download {} [{}/{}]".format(file_name, index + 1, total))
-        file_path = os.path.join("logs", "weights", file_name)
+    for weight in config["weights"]:
+        logger.info("Starting to download {} [{}/{}]".format(weight["name"], index + 1, total))
+        file_path = os.path.join("logs", "weights", "{}.h5".format(weight["name"]))
+        
         if os.path.exists(file_path):
             continue
         
-        with urllib.request.urlopen(url) as resp, open(file_path, 'wb') as out:
-            shutil.copyfileobj(resp, out)
+        if weight.get("requestType", "fileTransfer") == "fileTransfer":
+            download_file(weight["url"], file_path)
+        else:
+            logger.info("Url pre assigned found, sending request to get file url")
+            url = request_file_url(weight["url"])
+            download_file(url, file_path)
         
-        logger.info("{} weight downloaded! [{}/{}]".format(file_name, index + 1, total))
+        logger.info("{} weight downloaded! [{}/{}]".format(weight["name"], index + 1, total))
         index += 1
     
     logger.info("All weights downloaded!")
+
+
+def download_file(url, file_path):
+    with urllib.request.urlopen(url) as resp, open(file_path, 'wb') as out:
+        shutil.copyfileobj(resp, out)
+
+
+def request_file_url(signed_url):
+    response = requests.get(signed_url)
+    if response.status_code == 200:
+        logger.info("Weights file url got successfully, starting download")
+        data = json.loads(response.content.decode())
+        
+        return data["body"]
+    
+    raise Exception(f"Invalid url {signed_url}")
 
 
 def wait_to_send_worker_names():
