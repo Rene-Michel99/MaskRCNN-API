@@ -88,7 +88,7 @@ class APIServer:
         while True:    
             try:
                 msg = client_sock.recv(1024)
-                worker_name = msg.decode()
+                worker_name = msg.decode("utf-8")
                 break
             except Exception as ex:
                 timer += 1

@@ -29,6 +29,7 @@ import multiprocessing
 from dotenv import load_dotenv
 
 
+random.seed(74642620)
 if os.path.exists(".env"):
     load_dotenv()
 
@@ -37,12 +38,17 @@ cpu_count = multiprocessing.cpu_count()
 model_server_timeout = os.environ.get('SERVER_TIMEOUT', 60)
 model_server_workers = int(os.environ.get('SERVER_WORKERS', cpu_count))
 adjs = [
-    'Saltitante', 'Cansado', 'Risonho', 'Berrante', 'Trombudo', 'Zangado', 'Pulante',
-    'Fedorento', 'Choroso', 'Avexado', 'Atrevido', 'Careca', 'Calvo'
+    "Saltitante", "Cansado", "Risonho", "Berrante", "Trombadinha", "Zangado", "Pulante",
+    "Fedorento", "Chorão", "Avexado", "Atrevido", "Careca", "Calvo", "Apressado",
+    "Surrado", "Malvado", "Sonolento", "Confuso", "Bagunçado", "Trabalhador",
+    "Rebaixado", "Nanico", "Preguiçoso", "Briguento", "Sonegador", "Guloso",
+    "Agiota"
 ]
 subts = [
-    'Cavalo', 'Pinguim', 'Peixe', 'Urso', 'Lhamazinha', 'Sardinha',
-    'Papagaio', 'Arara', 'Pato', 'Ursinho', 'Galinha'
+    "Cavalo", "Pinguim", "Peixe", "Urso", "Lhama", "Sardinha", "Rato",
+    "Papagaio", "Arara", "Pato", "Tilápia", "Galinha", "Sapo", "Guabiru",
+    "Gaivota", "Cachorro", "Macaco", "Sagui", "Gato", "Cururu", "Cigarra",
+    "Barata", "Besouro", "Jacaré"
 ]
 
 if not os.path.exists("/app/logs"):
@@ -124,15 +130,17 @@ def download_dependencies():
         
         if os.path.exists(file_path):
             continue
+        try:
+            if weight.get("requestType", "fileTransfer") == "fileTransfer":
+                download_file(weight["url"], file_path)
+            elif weight["requestType"] == "signedRequest":
+                logger.info("Url pre assigned found, sending request to get file url")
+                url = request_file_url(weight["url"])
+                download_file(url, file_path)
+            logger.info("{} weight downloaded! [{}/{}]".format(weight["name"], index + 1, total))
+        except Exception as ex:
+            logger.exception(ex)
         
-        if weight.get("requestType", "fileTransfer") == "fileTransfer":
-            download_file(weight["url"], file_path)
-        else:
-            logger.info("Url pre assigned found, sending request to get file url")
-            url = request_file_url(weight["url"])
-            download_file(url, file_path)
-        
-        logger.info("{} weight downloaded! [{}/{}]".format(weight["name"], index + 1, total))
         index += 1
     
     logger.info("All weights downloaded!")
@@ -151,21 +159,49 @@ def request_file_url(signed_url):
         
         return data["body"]
     
-    raise Exception(f"Invalid url {signed_url}")
+    raise Exception(f"Invalid url {signed_url}, replied with status code {response.status_code}")
+
+
+def get_cool_name():
+    name = random.choice(subts)
+    sufix_name = random.choice(adjs)
+    is_gender_name = sufix_name.endswith("a") or sufix_name.endswith("o") or sufix_name.endswith("or") or sufix_name.endswith("ar")
+    if name.endswith("a") and is_gender_name and sufix_name not in ["Careca", "Agiota", "Trombadinha"]:
+        if sufix_name.endswith("r"):
+            sufix_name = sufix_name + "a"
+        elif sufix_name.endswith("ão"):
+            sufix_name = sufix_name[:len(sufix_name) - 2] + "ona"
+        else:
+            sufix_name = sufix_name[:len(sufix_name) - 1] + "a"
+    elif name.endswith("o") and is_gender_name and sufix_name not in ["Careca", "Agiota", "Trombadinha"]:
+        if sufix_name.endswith("r"):
+            sufix_name = sufix_name[:len(sufix_name) - 2] + "or"
+        else:
+            sufix_name = sufix_name[:len(sufix_name) - 1] + "o"
+    
+    return name + sufix_name
+
+
+def get_unique_name(names: list):
+    while True:
+        worker_name = get_cool_name()
+        if worker_name not in names:
+            names.append(worker_name)
+            return worker_name
 
 
 def wait_to_send_worker_names():
-    random.seed(42)
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.bind(('localhost', 3000))
     server_sock.listen(model_server_workers)
     logger.info("Waiting connection from workers...")
 
+    names = []
     for _ in range(model_server_workers):
         conn, _ = server_sock.accept()
-        worker_name = random.choice(subts) + random.choice(adjs)
+        worker_name = get_unique_name(names)
         logger.info("Connection received! Replying with worker id {}".format(worker_name))
-        conn.sendall(worker_name.encode())
+        conn.sendall(worker_name.encode("utf-8"))
         conn.close()
     server_sock.close()
 
