@@ -20,14 +20,15 @@ from .routes import MaskRCNNInferenceRoute, MaskRCNNStatusRoute, ConfigRoute, Ge
 
 
 class APIServer:
-    def __init__(self):
+    def __init__(self, worker_name: str, log_dir: str):
         self.app = Flask(__name__)
         self.cors = CORS(self.app)
+
         load_dotenv()
         self.port = os.environ.get("SERVER_PORT", 8080)
         
-        self.worker_name = self._get_worker_name()
-        log_dir = self._get_log_dir()
+        self.worker_name = worker_name
+        self._write_pid(log_dir)
         self.api_config = APIConfig(
             approx_epsilon=4,
             log_dir=log_dir,
@@ -56,19 +57,9 @@ class APIServer:
 
         self.logger.info(f"{self.worker_name} is ready listening on port {str(self.port)}")
     
-    def _get_log_dir(self):
-        log_dir = os.path.join(
-            os.getcwd(),
-            "logs",
-            self.worker_name,
-        )
-        if not os.path.exists(log_dir):
-            os.mkdir(log_dir)
-        
+    def _write_pid(self, log_dir: str):
         with open(os.path.join(log_dir, "pid"), "w") as f:
             f.write(str(os.getpid()))
-        
-        return log_dir
     
     def _get_swagger_blueprint(self):
         return get_swaggerui_blueprint(
@@ -78,28 +69,6 @@ class APIServer:
                 'app_name': "MaskRCNNAPI"
             }
         )
-    
-    def _get_worker_name(self, timeout=10):
-        client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        print("Connecting to main server to get unique id...")
-        client_sock.connect(('localhost', 3000))
-        worker_name = None
-        timer = 0
-        while True:    
-            try:
-                msg = client_sock.recv(1024)
-                worker_name = msg.decode("utf-8")
-                break
-            except Exception as ex:
-                timer += 1
-                print(ex)
-                time.sleep(1)
-            
-            if timer >= timeout:
-                break
-        
-        client_sock.close()
-        return worker_name
         
     def _build_logger(self, log_dir: str):
         logger = logging.getLogger(self.worker_name)
