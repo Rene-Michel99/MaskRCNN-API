@@ -11,13 +11,11 @@ class GetWorkersRoute:
     
     def process(self):
         if not self.workers:
-            workers = os.listdir("/app/logs")
-            workers.remove("weights")
-            workers.remove("serve.log")
-            for worker in workers:
-                with open(f"/app/logs/{worker}/pid", "r") as f:
-                    pid = f.read().replace("\n", "").strip()
-                    self.workers[pid] = worker
+            for item in os.listdir("/app/logs"):
+                if os.path.isdir(f"/app/logs/{item}") and os.path.exists(f"/app/logs/{item}/pid"):
+                    with open(f"/app/logs/{item}/pid", "r") as f:
+                        pid = f.read().replace("\n", "").strip()
+                        self.workers[pid] = item
         
         response = {worker: {"status": "dead"} for worker in self.workers.values()}
         for proc in psutil.process_iter(["pid", "status"]):

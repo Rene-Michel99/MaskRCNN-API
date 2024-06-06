@@ -28,6 +28,8 @@ import threading
 import multiprocessing
 from dotenv import load_dotenv
 
+from src.services import MemoryCleanService
+
 
 random.seed(74642620)
 if os.path.exists(".env"):
@@ -42,13 +44,13 @@ adjs = [
     "Fedorento", "Chorão", "Avexado", "Atrevido", "Careca", "Calvo", "Apressado",
     "Surrado", "Malvado", "Sonolento", "Confuso", "Bagunçado", "Trabalhador",
     "Rebaixado", "Nanico", "Preguiçoso", "Briguento", "Sonegador", "Guloso",
-    "Agiota"
+    "Agiota", "Bombado"
 ]
 subts = [
     "Cavalo", "Pinguim", "Peixe", "Urso", "Lhama", "Sardinha", "Rato",
     "Papagaio", "Arara", "Pato", "Tilápia", "Galinha", "Sapo", "Guabiru",
     "Gaivota", "Cachorro", "Macaco", "Sagui", "Gato", "Cururu", "Cigarra",
-    "Barata", "Besouro", "Jacaré"
+    "Barata", "Besouro", "Jacaré", "Tartaruga"
 ]
 
 if not os.path.exists("/app/logs"):
@@ -101,12 +103,19 @@ def start_server():
     signal.signal(signal.SIGTERM, lambda a, b: sigterm_handler(nginx.pid, gunicorn.pid))
 
     # Exit the inference server upon exit of either subprocess
+    memory_cleaner = MemoryCleanService(
+        images_dir="/app/images",
+        max_file_size=float(os.environ.get("FILES_MAX_SIZE", 0.5)),
+        clean_time_window=float(os.environ.get("CLEAN_WINDOW_TIME", 60 * 30)),
+    )
+    memory_cleaner.start()
     pids = set([nginx.pid, gunicorn.pid])
     while True:
         pid, _ = os.wait()
         if pid in pids:
             break
-
+    
+    memory_cleaner.stop()
     sigterm_handler(nginx.pid, gunicorn.pid)
     logger.info('Inference server exiting')
 

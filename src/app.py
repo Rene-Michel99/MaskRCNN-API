@@ -1,7 +1,5 @@
 import os
-import time
 import json
-import socket
 import logging
 from flask_cors import CORS, cross_origin
 from flask_swagger_ui import get_swaggerui_blueprint
@@ -37,7 +35,6 @@ class APIServer:
         )
 
         self.logger = self._build_logger(log_dir)
-
         self.model_cache = ModelCache(self.logger, self.api_config)
 
         self.inference_route = MaskRCNNInferenceRoute(self.logger, self.api_config)
@@ -54,7 +51,6 @@ class APIServer:
             self._get_swagger_blueprint(),
             url_prefix="/doc"
         )
-
         self.logger.info(f"{self.worker_name} is ready listening on port {str(self.port)}")
     
     def _write_pid(self, log_dir: str):

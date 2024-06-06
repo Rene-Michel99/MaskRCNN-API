@@ -19,6 +19,7 @@ RUN apt-get upgrade -y
 RUN apt-get install -y git wget nginx ca-certificates
 RUN apt-get install ffmpeg libsm6 libxext6 -y -y
 
+RUN pip install --upgrade pip
 RUN git clone -b develop https://github.com/Rene-Michel99/Mask-RCNN-TF2.8
 RUN pip install ./Mask-RCNN-TF2.8
 RUN pip install -r /app/requirements.txt
