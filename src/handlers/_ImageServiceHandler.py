@@ -2,7 +2,7 @@ import os
 import uuid
 import base64
 import shutil
-import cv2 as cv
+import skimage
 import urllib.request
 
 from ..exceptions import UnprocessableRequest, BadRequestException
@@ -43,7 +43,7 @@ class ImageServiceHandler:
             
             raise UnprocessableRequest(f"Can't download image from url {image_url}")
         
-        image = cv.imread(image_path)
+        image = skimage.io.imread(image_path)
         self._unlock_file(file_name)
         return image
     
@@ -68,7 +68,7 @@ class ImageServiceHandler:
             with open(image_path, 'wb') as f:
                 f.write(base64.b64decode(encoded_image))
             
-            return cv.imread(image_path)
+            return skimage.io.imread(image_path)
         except ValueError:
             raise BadRequestException(
                  "The image data must be encoded in base64 with pattern data:filename/png;base64,image_base64_data"

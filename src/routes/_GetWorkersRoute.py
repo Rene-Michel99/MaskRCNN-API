@@ -6,14 +6,15 @@ import datetime
 
 class GetWorkersRoute:
 
-    def __init__(self):
+    def __init__(self, log_dir: str):
         self.workers = {}
+        self.log_dir = os.path.join(log_dir, "..")
     
     def process(self):
         if not self.workers:
-            for item in os.listdir("/app/logs"):
-                if os.path.isdir(f"/app/logs/{item}") and os.path.exists(f"/app/logs/{item}/pid"):
-                    with open(f"/app/logs/{item}/pid", "r") as f:
+            for item in os.listdir(self.log_dir):
+                if os.path.isdir(f"{self.log_dir}/{item}") and os.path.exists(f"{self.log_dir}/{item}/pid"):
+                    with open(f"{self.log_dir}/{item}/pid", "r") as f:
                         pid = f.read().replace("\n", "").strip()
                         self.workers[pid] = item
         

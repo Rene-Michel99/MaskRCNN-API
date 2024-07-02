@@ -70,17 +70,18 @@ class MaskRCNNInferenceRoute:
         oned_masks = []
         for i in range(masks.shape[2]):
             mask = masks[:, :, i]
-            if np.sum(mask) > 0:
-                contours, _ = cv.findContours(mask.astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
-                oned_masks.append(self._convert_mask_img_to_2d_array_contours(contours))
+            contours, _ = cv.findContours(mask.astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+            oned_masks.append(self._convert_mask_img_to_2d_array_contours(contours))
         
         return oned_masks
     
     def _convert_mask_img_to_2d_array_contours(self, contours) -> list:
-        oned_contours = []
+        resized_contours = []
         for cnt in contours:
             cnt_approx = cv.approxPolyDP(cnt, self.api_config.approx_epsilon, True)
-            for point in cnt_approx:
-                oned_contours.append(point[0].tolist())
+            if len(resized_contours) == 0:
+                resized_contours.append(cnt_approx)
+            elif len(resized_contours) == 1 and len(resized_contours[0]) < len(cnt_approx):
+                resized_contours[0] = cnt_approx
         
-        return oned_contours
+        return resized_contours[0].reshape(-1, 2).tolist()

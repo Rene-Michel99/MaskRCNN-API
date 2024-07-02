@@ -40,7 +40,7 @@ class APIServer:
         self.inference_route = MaskRCNNInferenceRoute(self.logger, self.api_config)
         self.config_route = ConfigRoute(self.api_config, self.logger)
         self.status_route = MaskRCNNStatusRoute()
-        self.get_workers_route = GetWorkersRoute()
+        self.get_workers_route = GetWorkersRoute(self.api_config.log_dir)
 
         self.app.route("/inference", methods=["POST"])(self.inference)
         self.app.route("/status", methods=["GET"])(self.status)
