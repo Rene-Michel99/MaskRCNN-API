@@ -5,13 +5,16 @@ import shutil
 import skimage
 import urllib.request
 
+import skimage.transform
+
 from ..exceptions import UnprocessableRequest, BadRequestException
 
 
 class ImageServiceHandler:
 
-    def __init__(self, image_dir: str):
+    def __init__(self, image_dir: str, logger):
         self.image_dir = image_dir
+        self.logger = logger
     
     def get_image(self, data: dict):
         image_data = data["image"]
@@ -45,6 +48,9 @@ class ImageServiceHandler:
         
         image = skimage.io.imread(image_path)
         self._unlock_file(file_name)
+        if image.shape[2] == 4:
+            image = skimage.color.rgba2rgb(image)
+        
         return image
     
     def _lock_file(self, file_name: str):
@@ -56,19 +62,24 @@ class ImageServiceHandler:
     
     def _parse_base64_image(self, image_data: str):
         image_path = ""
+        self.logger.info("Parsing base64 image...")
         try:
             file_ext, encoded_image = image_data.split(',')
 
             file_ext = file_ext.replace('data:image', '')
-            file_ext = file_ext.replace('/', '.')
             file_ext = file_ext.replace(';base64', '')
-            file_name = str(uuid.uuid4()) + file_ext
+            file_name = str(uuid.uuid4()) + file_ext.replace("/", ".")
             
+            self.logger.info(f"Saving new image {file_name}")
             image_path = os.path.join(self.image_dir, file_name)
             with open(image_path, 'wb') as f:
                 f.write(base64.b64decode(encoded_image))
             
-            return skimage.io.imread(image_path)
+            image = skimage.io.imread(image_path)
+            if image.shape[2] == 4:
+                image = skimage.color.rgba2rgb(image)
+            
+            return image
         except ValueError:
             raise BadRequestException(
                  "The image data must be encoded in base64 with pattern data:filename/png;base64,image_base64_data"
@@ -77,5 +88,5 @@ class ImageServiceHandler:
             if os.path.exists(image_path):
                 os.remove(image_path)
             
-            raise UnprocessableRequest("image can't be used, maybe is corrupted")
+            raise UnprocessableRequest("Image can't be used, maybe is corrupted")
     

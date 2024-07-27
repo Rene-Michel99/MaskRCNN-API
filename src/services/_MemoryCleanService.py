@@ -13,7 +13,7 @@ class MemoryCleanService:
         self.images_dir = images_dir
         self.max_file_size = max_file_size
         self.clean_time_window = clean_time_window
-        self.logger = self._build_logger("/app/logs/memoryCleaner.log")
+        self.logger = self._build_logger("./logs/memoryCleaner.log")
         self.running = False
 
         self.logger.info(

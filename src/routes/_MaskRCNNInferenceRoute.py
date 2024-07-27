@@ -13,7 +13,7 @@ class MaskRCNNInferenceRoute:
     def __init__(self, logger: Logger, api_config: APIConfig) -> None:
         self.logger = logger
         self.api_config = api_config
-        self.image_handler = ImageServiceHandler(self.api_config.images_dir)
+        self.image_handler = ImageServiceHandler(self.api_config.images_dir, self.logger)
     
     def process(self, request: dict, model: ModelWrapper) -> dict:
         self._validate_request(request)
@@ -42,22 +42,33 @@ class MaskRCNNInferenceRoute:
         class_ids = self._parse_class_ids(results["class_ids"], model)
         scores = results["scores"].tolist() if type(results["scores"]) != list else results["scores"]
         masks = self._parse_masks(results["masks"])
+        extra_metrics = self._get_extra_metrics(results["masks"], model)
 
         output_data = {
             'inferences': [],
             'imgSize': img_shape
         }
-        for roi, class_id, score, mask in zip(rois, class_ids, scores, masks):
-            output_data['inferences'].append({
+        for roi, class_id, score, mask, metrics in zip(rois, class_ids, scores, masks, extra_metrics):
+            obj = {
                 'id': str(uuid.uuid4()),
                 'bbox': roi,
                 'className': class_id,
                 'score': score,
-                'points': mask
-            })
+                'points': mask,
+            }
+            obj.update(metrics)
+            output_data['inferences'].append(obj)
         
         self.logger.info("Results parsed successfully, replying response")
         return output_data
+    
+    def _get_extra_metrics(self, masks, model: ModelWrapper):
+        shapes = []
+        for i in range(masks.shape[2]):
+            mask = masks[:, :, i].astype(np.uint8) * 255
+            shapes.append(model.get_extra_metrics(mask))
+        
+        return shapes
 
     def _parse_class_ids(self, class_ids, model) -> list:
         parsed_class_ids = []

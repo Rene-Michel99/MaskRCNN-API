@@ -5,8 +5,6 @@ import logging
 
 import src.app as myapp
 
-# This is just a simple wrapper for gunicorn to find your app.
-
 class WorkerBuilder:
 
     def __init__(self) -> None:

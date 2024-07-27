@@ -15,6 +15,7 @@ class ModelCache:
         self.api_config = api_config
         self.models_config = {}
         self.weights = {}
+        self.extra_config = {}
 
         self._load_models_config()
     
@@ -22,6 +23,7 @@ class ModelCache:
         with open("./config.json", "r") as f:
             config = json.loads(f.read())
 
+        self.extra_config = config.get("extra", {})
         for item in config["modelsConfig"]:
             self.models_config[item["name"]] = Config(
                 images_per_gpu=item["imagesPerGpu"],
@@ -55,6 +57,7 @@ class ModelCache:
             mode="inference",
             config=self.models_config.get(key),
             model_dir=self.api_config.log_dir,
+            extra_config=self.extra_config.get(key)
         )
         model.load_weights(filepath=self.weights[key], by_name=True)
         self.cache[key].append(model)
