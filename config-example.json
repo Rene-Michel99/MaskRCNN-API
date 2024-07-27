@@ -3,6 +3,7 @@
         {
             "name": "mask_rcnn_coco",
             "url": "https://github.com/Rene-Michel99/Mask-RCNN-TF2.8/releases/download/pretrained_weights/mask_rcnn_coco.h5",
+            "fileType": "h5",
             "requestType": "fileTransfer"
         }
     ],
@@ -30,5 +31,12 @@
                 "teddy bear", "hair drier", "toothbrush"
             ]
         }
-    ]
+    ],
+    "extra": {
+        "coco": {
+            "name": "ShapeClassifier",
+            "weights": "ada_boost.pkl",
+            "classes": ["Regular", "Irregular"]
+        }
+    }
 }

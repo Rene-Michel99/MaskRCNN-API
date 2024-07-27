@@ -131,13 +131,13 @@ def download_dependencies():
     if not os.path.exists("./images"):
         os.system("mkdir images")
 
-    index = 0
     total = len(config["weights"])
-    for weight in config["weights"]:
+    for index, weight in enumerate(config["weights"]):
         logger.info("Starting to download {} [{}/{}]".format(weight["name"], index + 1, total))
-        file_path = os.path.join("logs", "weights", "{}.h5".format(weight["name"]))
+        file_path = os.path.join("logs", "weights", "{}.{}".format(weight["name"], weight["fileType"]))
         
         if os.path.exists(file_path):
+            logger.info("Weight already downloaded it, skipping...")
             continue
         try:
             if weight.get("requestType", "fileTransfer") == "fileTransfer":
@@ -149,8 +149,8 @@ def download_dependencies():
             logger.info("{} weight downloaded! [{}/{}]".format(weight["name"], index + 1, total))
         except Exception as ex:
             logger.exception(ex)
-        
-        index += 1
+    
+    logger.info("All weights downloaded!")
     
     logger.info("All weights downloaded!")
 
