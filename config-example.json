@@ -5,6 +5,12 @@
             "url": "https://github.com/Rene-Michel99/Mask-RCNN-TF2.8/releases/download/pretrained_weights/mask_rcnn_coco.h5",
             "fileType": "h5",
             "requestType": "fileTransfer"
+        },
+        {
+            "name": "ada_boost",
+            "url": "https://example-signed-url.com",
+            "fileType": "pkl",
+            "requestType": "signedRequest"
         }
     ],
     "modelsConfig": [
