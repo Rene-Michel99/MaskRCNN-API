@@ -1,4 +1,5 @@
 import json
+from typing import Dict
 from logging import Logger
 from mrcnn.Configs import Config
 
@@ -13,7 +14,7 @@ class ModelCache:
         self.cache = {}
         self.logger = logger
         self.api_config = api_config
-        self.models_config = {}
+        self.models_config: Dict[str, Config] = {}
         self.weights = {}
         self.extra_config = {}
 

@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from .utils import handle_exception
 from .models import ModelCache, APIConfig
-from .routes import MaskRCNNInferenceRoute, MaskRCNNStatusRoute, ConfigRoute, GetWorkersRoute
+from .routes import MaskRCNNInferenceRoute, MaskRCNNGetClassesRoute, ConfigRoute, GetWorkersRoute
 
 
 # docker image build -t maskrcnn:latest .
@@ -39,11 +39,11 @@ class APIServer:
 
         self.inference_route = MaskRCNNInferenceRoute(self.logger, self.api_config)
         self.config_route = ConfigRoute(self.api_config, self.logger)
-        self.status_route = MaskRCNNStatusRoute()
+        self.get_classes_route = MaskRCNNGetClassesRoute(self.model_cache)
         self.get_workers_route = GetWorkersRoute(self.api_config.log_dir)
 
         self.app.route("/inference", methods=["POST"])(self.inference)
-        self.app.route("/status", methods=["GET"])(self.status)
+        self.app.route("/classes", methods=["GET"])(self.get_classes)
         self.app.route("/updateConfig", methods=["PUT"])(self.update_config)
         self.app.route("/workers", methods=["GET"])(self.get_workers)
         self.app.route("/static/<path:path>")(self.get_static)
@@ -97,8 +97,8 @@ class APIServer:
     
     @cross_origin()
     @handle_exception()
-    def status(self):
-        return self.status_route.process(self.model_cache)
+    def get_classes(self):
+        return self.get_classes_route.process()
     
     @cross_origin()
     @handle_exception(success_code=203)
