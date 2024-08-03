@@ -19,9 +19,19 @@ class MaskRCNNInferenceRoute:
         self._validate_request(request)
         
         image = self.image_handler.get_image(request)
-        results = model.detect([image], verbose=1)[0]
+        images = [image]
+        if image.shape[0] > 1024 and image.shape[1] > 1024 and self.api_config.split_images_above_maximum:
+            self.logger.info("Image received has {} which is above the maximum (1024, 1024, 3), splitting image in 4...".format(image.shape))
+            height, width, _ = image.shape
+            images = [
+                ((0,0), image[0:height//2, 0:width//2].copy()),
+                ((height//2, 0), image[height//2:height, 0:width//2].copy()),
+                ((0, width//2), image[0:height//2, width//2:width].copy()),
+                ((height//2, width//2), image[height//2:height, width//2:width].copy())
+            ]
+            self.logger.info("Image splitted successfully")
 
-        return self._parse_detections(results, image.shape, model)
+        return self._parse_detections(images, image.shape, model)
     
     def _validate_request(self, data) -> None:
         self.logger.info("Validating request")
@@ -35,58 +45,42 @@ class MaskRCNNInferenceRoute:
             not image_data.startswith("https://"):
             raise BadRequestException("Image encode format not allowed, valid format are base64 (data:filename/png;base64,image_base64_data) or URL")      
 
-    def _parse_detections(self, results, img_shape, model) -> dict:
+    def _parse_detections(self, images, img_shape, model) -> dict:
         self.logger.info("Starting to parse results of inference")
         
-        rois = results["rois"].tolist() if type(results["rois"]) != list else results["rois"]
-        class_ids = self._parse_class_ids(results["class_ids"], model)
-        scores = results["scores"].tolist() if type(results["scores"]) != list else results["scores"]
-        masks = self._parse_masks(results["masks"])
-        extra_metrics = self._get_extra_metrics(results["masks"], model)
-
         output_data = {
             'inferences': [],
             'imgSize': img_shape
         }
-        for roi, class_id, score, mask, metrics in zip(rois, class_ids, scores, masks, extra_metrics):
-            obj = {
-                'id': str(uuid.uuid4()),
-                'bbox': roi,
-                'className': class_id,
-                'score': score,
-                'points': mask,
-            }
-            obj.update(metrics)
-            output_data['inferences'].append(obj)
+        for data in images:
+            adjust, image = data
+            res = model.detect([image], verbose=1)[0]
+            for i in range(len(res["class_ids"])):
+                mask = res["masks"][:, :, i]
+                bbox = res["rois"][i].tolist()
+                obj = {
+                    'id': str(uuid.uuid4()),
+                    'bbox': [bbox[0] + adjust[0], bbox[1] + adjust[1], bbox[2] + adjust[0], bbox[3] + adjust[1]],
+                    'className': model.config.CLASS_NAMES[res["class_ids"][i]],
+                    'score': float(res["scores"][i]),
+                    'points': self._parse_mask(mask, adjust),
+                }
+                metrics = self._get_extra_metrics(mask, model)
+                obj.update(metrics)
+                output_data['inferences'].append(obj)
         
         self.logger.info("Results parsed successfully, replying response")
         return output_data
     
-    def _get_extra_metrics(self, masks, model: ModelWrapper):
-        shapes = []
-        for i in range(masks.shape[2]):
-            mask = masks[:, :, i].astype(np.uint8) * 255
-            shapes.append(model.get_extra_metrics(mask))
-        
-        return shapes
+    def _get_extra_metrics(self, mask, model: ModelWrapper):
+        return model.get_extra_metrics(mask.astype(np.uint8) * 255)
 
-    def _parse_class_ids(self, class_ids, model) -> list:
-        parsed_class_ids = []
-        for class_id in class_ids:
-            parsed_class_ids.append(model.config.CLASS_NAMES[class_id])
+    def _parse_mask(self, mask, adjust) -> list:
+        contours, _ = cv.findContours(mask.astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         
-        return parsed_class_ids
-
-    def _parse_masks(self, masks) -> list:
-        oned_masks = []
-        for i in range(masks.shape[2]):
-            mask = masks[:, :, i]
-            contours, _ = cv.findContours(mask.astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-            oned_masks.append(self._convert_mask_img_to_2d_array_contours(contours))
-        
-        return oned_masks
+        return self._convert_mask_img_to_2d_array_contours(contours, adjust)
     
-    def _convert_mask_img_to_2d_array_contours(self, contours) -> list:
+    def _convert_mask_img_to_2d_array_contours(self, contours, adjust) -> list:
         resized_contours = []
         for cnt in contours:
             cnt_approx = cv.approxPolyDP(cnt, self.api_config.approx_epsilon, True)
@@ -95,4 +89,8 @@ class MaskRCNNInferenceRoute:
             elif len(resized_contours) == 1 and len(resized_contours[0]) < len(cnt_approx):
                 resized_contours[0] = cnt_approx
         
-        return resized_contours[0].reshape(-1, 2).tolist()
+        resized_contours = resized_contours[0].reshape(-1, 2).tolist()
+        if adjust[0] == 0 and adjust[1] == 0:
+            return resized_contours
+        
+        return [[point[0] + adjust[1], point[1] + adjust[0]] for point in resized_contours]

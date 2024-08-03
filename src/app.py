@@ -32,6 +32,7 @@ class APIServer:
             log_dir=log_dir,
             images_dir="./images",
             max_instances_model=int(os.environ.get("MODEL_MAX_QTY", 1)),
+            split_images_above_maximum=bool(os.environ.get("SPLIT_IMAGES_ABOVE_MAXIMUM", 0))
         )
 
         self.logger = self._build_logger(log_dir)

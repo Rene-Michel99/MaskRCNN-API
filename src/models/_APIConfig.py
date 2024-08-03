@@ -6,9 +6,11 @@ class APIConfig:
             log_dir: str,
             images_dir: str,
             max_instances_model: int,
+            split_images_above_maximum: bool
     ) -> None:
 
         self.approx_epsilon = approx_epsilon
+        self.split_images_above_maximum = split_images_above_maximum
         self._log_dir = log_dir
         self._images_dir = images_dir
         self._max_instances_model = max_instances_model
