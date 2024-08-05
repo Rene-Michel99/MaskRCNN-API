@@ -122,16 +122,11 @@ paths:
                    type: string
                    example: Request config key is not valid config
   /block:
-    put:
+    post:
       tags:
         - block
       summary: Block the server
       description: Block the server, making inference route replying with 403
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Config'
       responses:
         '203':
           description: successful operation
