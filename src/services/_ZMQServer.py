@@ -27,19 +27,19 @@ class ZMQServer:
 
         # Cria um socket ROUTER para receber mensagens dos workers
         self.router_socket = self.context.socket(zmq.ROUTER)
-        self.router_socket.bind("tcp://*:5555")
+        self.router_socket.bind("tcp://localhost:5555")
 
         # Cria um socket PUB para enviar mensagens aos workers
         self.pub_socket = self.context.socket(zmq.PUB)
-        self.pub_socket.bind("tcp://*:5556")
+        self.pub_socket.bind("tcp://localhost:5556")
 
         self.logger.info("ZMQ Server waiting messages")
         
         while self.running:
             try:
-                identity, msg = self.router_socket.recv_multipart()
-                self.logger.info(f"Message received from {identity}: {msg.decode('utf-8')}, sending for all workers")
-                self.pub_socket.send_string(msg.decode('utf-8'))
+                _, identity, msg = self.router_socket.recv_multipart()
+                self.logger.info(f"Message received from {identity.decode()}: {msg.decode()}, sending for all workers")
+                self.pub_socket.send_string(msg)
                 self.logger.info("Message sent successfully!")
             except zmq.error.ContextTerminated:
                 break

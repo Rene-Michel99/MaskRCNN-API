@@ -43,10 +43,10 @@ class ZMQClient:
             try:
                 msg = self.sub_socket.recv_string()
 
-                if msg.decode() == "BLOCK_SYSTEM":
-                    self.logger.info("BLOCK_SYSTEM message received, starting to block system")
+                if msg == "BLOCK_SYSTEM":
+                    self.logger.info("BLOCK_SYSTEM message received, starting to block worker")
                     self.block_system.block()
-                    self.logger.info("Server is now blocked")
+                    self.logger.info("Worker is now blocked")
             except zmq.error.ContextTerminated:
                 break
             except Exception as ex:
