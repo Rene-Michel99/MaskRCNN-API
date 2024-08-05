@@ -59,6 +59,8 @@ paths:
                   error:
                     type: string
                     example: no image found in request
+        '403':
+          description: Server is blocked
         '422':
           description: Validation exception
           content:
