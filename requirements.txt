@@ -7,3 +7,4 @@ python-dotenv
 psutil
 Flask-Swagger-UI
 scikit-learn
+pyzmq

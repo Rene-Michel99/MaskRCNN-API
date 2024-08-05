@@ -3,7 +3,7 @@ from typing import Dict
 from logging import Logger
 from mrcnn.Configs import Config
 
-from ..exceptions import NotFoundException, ServiceUnavailableException
+from ..exceptions import NotFoundException, ServiceUnavailableException, SystemBlockedException
 from ._ModelWrapper import ModelWrapper
 from ._APIConfig import APIConfig
 
@@ -34,9 +34,18 @@ class ModelCache:
             )
             self.weights[item["name"]] = "logs/weights/{}".format(item["weights"])
     
+    def clean_cache(self):
+        self.models_config.clear()
+        self.weights.clear()
+        self.cache.clear()
+    
     def get_model_based_on_data(self, data: dict) -> ModelWrapper:
+        if not self.models_config and not self.cache:
+            raise SystemBlockedException()
+        
         classes = data["classes"]
         self.logger.info("Request inference received for detection for {}".format(classes))
+        
         model_key = ""
         for key, config in self.models_config.items():
             found = sum([class_name.lower() == classes[0].lower() for class_name in config.CLASS_NAMES])

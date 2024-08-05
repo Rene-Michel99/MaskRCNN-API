@@ -20,12 +20,14 @@ servers:
 tags:
   - name: inference
     description: The process of instance segmentation
-  - name: status
-    description: The status health of the server and Mask RCNN model
+  - name: classes
+    description: The classes configured in Mask RCNN
   - name: updateConfig
     description: Update the config of the server
   - name: workers
     description: Status of each worker in the server
+  - name: block
+    description: Route to block the server
 paths:
   /inference:
     post:
@@ -77,10 +79,10 @@ paths:
                   error:
                    type: string
                    example: MaskRCNN model is already processing, try again later
-  /status:
+  /classes:
     get:
       tags:
-        - status
+        - classes
       summary: Returns status of server and model
       description: Returns a object of configuration of model
       responses:
@@ -91,31 +93,10 @@ paths:
               schema:
                 type: object
                 properties:
-                  status:
-                    type: object
-                    properties:
-                      isCompiled:
-                        type: boolean
-                        example: false
-                      modelDir:
-                        type: string
-                        example: ./logs
-                      mode:
-                        type: string
-                        example: inference
-                      weights:
-                        type: string
-                        example: ./logs/coco.h5
-                      locked:
-                        type: boolean
-                        example: false
-                      lastTimeLocked:
-                        type: string
-                        example: "2024-06-04T12:55:26.135219"
-                      classNames:
-                        type: string
-                        format: array
-                        example: ["person", "car", "bus", "bed"]
+                  classes:
+                    type: string
+                    format: array
+                    example: ["person", "car", "bus", "bed"]
   /updateConfig:
     put:
       tags:
@@ -140,6 +121,23 @@ paths:
                   error:
                    type: string
                    example: Request config key is not valid config
+  /block:
+    put:
+      tags:
+        - block
+      summary: Block the server
+      description: Block the server, making inference route replying with 403
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Config'
+      responses:
+        '203':
+          description: successful operation
+        '500':
+          description: Internal error
+          
   /workers:
     get:
       tags:

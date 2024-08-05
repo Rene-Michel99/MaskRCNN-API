@@ -19,7 +19,7 @@ class MaskRCNNInferenceRoute:
         self._validate_request(request)
         
         image = self.image_handler.get_image(request)
-        images = [image]
+        images = [((0, 0), image)]
         if image.shape[0] > 1024 and image.shape[1] > 1024 and self.api_config.split_images_above_maximum:
             self.logger.info("Image received has {} which is above the maximum (1024, 1024, 3), splitting image in 4...".format(image.shape))
             height, width, _ = image.shape

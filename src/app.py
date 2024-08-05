@@ -8,7 +8,9 @@ from dotenv import load_dotenv
 
 from .utils import handle_exception
 from .models import ModelCache, APIConfig
-from .routes import MaskRCNNInferenceRoute, MaskRCNNGetClassesRoute, ConfigRoute, GetWorkersRoute
+from .routes import MaskRCNNInferenceRoute, MaskRCNNGetClassesRoute, ConfigRoute, GetWorkersRoute, BlockRoute
+from .handlers import BlockSystemHandler
+from .services import ZMQClient
 
 
 # docker image build -t maskrcnn:latest .
@@ -37,22 +39,31 @@ class APIServer:
 
         self.logger = self._build_logger(log_dir)
         self.model_cache = ModelCache(self.logger, self.api_config)
+        self.block_system_handler = BlockSystemHandler(self.model_cache)
+        self.zmq_client = ZMQClient(
+            worker_name=self.worker_name,
+            block_system=self.block_system_handler,
+            logger=self.logger
+        )
 
         self.inference_route = MaskRCNNInferenceRoute(self.logger, self.api_config)
         self.config_route = ConfigRoute(self.api_config, self.logger)
         self.get_classes_route = MaskRCNNGetClassesRoute(self.model_cache)
         self.get_workers_route = GetWorkersRoute(self.api_config.log_dir)
+        self.block_route = BlockRoute(zmq_client=self.zmq_client, logger=self.logger)
 
         self.app.route("/inference", methods=["POST"])(self.inference)
         self.app.route("/classes", methods=["GET"])(self.get_classes)
         self.app.route("/updateConfig", methods=["PUT"])(self.update_config)
         self.app.route("/workers", methods=["GET"])(self.get_workers)
+        self.app.route("/block", methods=["POST"])(self.block_system)
         self.app.route("/static/<path:path>")(self.get_static)
         self.app.register_blueprint(
             self._get_swagger_blueprint(),
             url_prefix="/doc"
         )
         self.logger.info(f"{self.worker_name} is ready listening on port {str(self.port)}")
+        self.zmq_client.start_listen()
     
     def _write_pid(self, log_dir: str):
         with open(os.path.join(log_dir, "pid"), "w") as f:
@@ -111,6 +122,11 @@ class APIServer:
     @handle_exception()
     def get_workers(self):
         return self.get_workers_route.process()
+    
+    @cross_origin()
+    @handle_exception(success_code=203)
+    def block_system(self):
+        return self.block_route.process()
     
     @cross_origin()
     @handle_exception()

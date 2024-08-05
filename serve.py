@@ -28,7 +28,7 @@ import threading
 import multiprocessing
 from dotenv import load_dotenv
 
-from src.services import MemoryCleanService
+from src.services import MemoryCleanService, ZMQServer
 
 
 random.seed(74642620)
@@ -108,13 +108,17 @@ def start_server():
         max_file_size=float(os.environ.get("FILES_MAX_SIZE", 0.5)),
         clean_time_window=float(os.environ.get("CLEAN_WINDOW_TIME", 60 * 30)),
     )
+    zmq_server = ZMQServer(logger=logger)
     memory_cleaner.start()
+    zmq_server.start()
+
     pids = set([nginx.pid, gunicorn.pid])
     while True:
         pid, _ = os.wait()
         if pid in pids:
             break
     
+    zmq_server.stop()
     memory_cleaner.stop()
     sigterm_handler(nginx.pid, gunicorn.pid)
     logger.info('Inference server exiting')
