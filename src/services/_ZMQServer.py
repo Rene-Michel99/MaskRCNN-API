@@ -40,7 +40,7 @@ class ZMQServer:
                 _, identity, msg = self.router_socket.recv_multipart()
                 self.logger.info(f"Message received from {identity.decode()}: {msg.decode()}, sending for all workers")
                 self.pub_socket.send_string(msg)
-                self.logger.info("Message sent successfully!")
+                self.logger.info("Message published successfully!")
             except zmq.error.ContextTerminated:
                 break
             except Exception as ex:
