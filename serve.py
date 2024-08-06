@@ -103,13 +103,16 @@ def start_server():
     signal.signal(signal.SIGTERM, lambda a, b: sigterm_handler(nginx.pid, gunicorn.pid))
 
     # Exit the inference server upon exit of either subprocess
-    memory_cleaner = MemoryCleanService(
-        images_dir="/app/images",
-        max_file_size=float(os.environ.get("FILES_MAX_SIZE", 0.5)),
-        clean_time_window=float(os.environ.get("CLEAN_WINDOW_TIME", 60 * 30)),
-    )
+    memory_cleaner = None
+    if bool(int(os.environ.get("USE_CLEAN_SERVICE", 0))):
+        memory_cleaner = MemoryCleanService(
+            images_dir="/app/images",
+            max_file_size=float(os.environ.get("FILES_MAX_SIZE", 0.5)),
+            clean_time_window=float(os.environ.get("CLEAN_WINDOW_TIME", 60 * 30)),
+        )
+        memory_cleaner.start()
+    
     zmq_server = ZMQServer(logger=logger)
-    memory_cleaner.start()
     zmq_server.start()
 
     pids = set([nginx.pid, gunicorn.pid])
@@ -119,7 +122,9 @@ def start_server():
             break
     
     zmq_server.stop()
-    memory_cleaner.stop()
+    if memory_cleaner is not None:
+        memory_cleaner.stop()
+    
     sigterm_handler(nginx.pid, gunicorn.pid)
     logger.info('Inference server exiting')
 

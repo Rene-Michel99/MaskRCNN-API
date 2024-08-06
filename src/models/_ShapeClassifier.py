@@ -5,12 +5,16 @@ import numpy as np
 
 class ShapeClassifier:
 
-    def __init__(self, weights_path: str, classes: list):
+    def __init__(self, weights_path: str, classes: list, filter_by_class_name):
         self.classes = classes
+        self.filter_by_class_name = filter_by_class_name
         with open(weights_path, "rb") as f:
             self.model = pickle.load(f)
     
-    def predict(self, img):
+    def predict(self, img, class_name: str):
+        if class_name != self.filter_by_class_name and self.filter_by_class_name != None:
+            return None
+        
         data = []
         regions = skimage.measure.regionprops(label_image=img)
         max_region = max(regions, key=lambda region: region.area)

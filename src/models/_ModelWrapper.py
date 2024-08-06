@@ -16,7 +16,8 @@ class ModelWrapper(MaskRCNN):
         if extra_config is not None and extra_config["name"] == "ShapeClassifier":
             self.shape_classifier = ShapeClassifier(
                 weights_path=f"./logs/weights/{extra_config['weights']}",
-                classes=extra_config["classes"]
+                classes=extra_config["classes"],
+                filter_by_class_name=extra_config.get("className"),
             )
     
     def detect(self, images: list, verbose=0) -> list:
@@ -26,9 +27,11 @@ class ModelWrapper(MaskRCNN):
         with self.lock:
             return super().detect(images, verbose)
     
-    def get_extra_metrics(self, mask) -> dict:
+    def get_extra_metrics(self, mask, class_name: str) -> dict:
         metrics = {}
         if self.shape_classifier is not None:
-            metrics["shape"] = self.shape_classifier.predict(mask)
+            shape = self.shape_classifier.predict(mask, class_name)
+            if shape is not None:
+                metrics["shape"] = shape
         
         return metrics

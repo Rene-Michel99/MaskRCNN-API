@@ -58,22 +58,23 @@ class MaskRCNNInferenceRoute:
             for i in range(len(res["class_ids"])):
                 mask = res["masks"][:, :, i]
                 bbox = res["rois"][i].tolist()
+                class_name = model.config.CLASS_NAMES[res["class_ids"][i]]
                 obj = {
                     'id': str(uuid.uuid4()),
                     'bbox': [bbox[0] + adjust[0], bbox[1] + adjust[1], bbox[2] + adjust[0], bbox[3] + adjust[1]],
-                    'className': model.config.CLASS_NAMES[res["class_ids"][i]],
+                    'className': class_name,
                     'score': float(res["scores"][i]),
                     'points': self._parse_mask(mask, adjust),
                 }
-                metrics = self._get_extra_metrics(mask, model)
+                metrics = self._get_extra_metrics(mask, model, class_name)
                 obj.update(metrics)
                 output_data['inferences'].append(obj)
         
         self.logger.info("Results parsed successfully, replying response")
         return output_data
     
-    def _get_extra_metrics(self, mask, model: ModelWrapper):
-        return model.get_extra_metrics(mask.astype(np.uint8) * 255)
+    def _get_extra_metrics(self, mask, model: ModelWrapper, class_name: str):
+        return model.get_extra_metrics(mask.astype(np.uint8) * 255, class_name)
 
     def _parse_mask(self, mask, adjust) -> list:
         contours, _ = cv.findContours(mask.astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
